@@ -1,0 +1,11 @@
+name: Sync teams
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour.
+
+jobs:
+  call-sync-teams:
+    uses: cloudoperators/common/workflows//team-syncer/sync.yml@main
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
