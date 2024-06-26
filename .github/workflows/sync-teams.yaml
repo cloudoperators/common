@@ -6,6 +6,7 @@ on:
 
 jobs:
   sync-teams:
-    uses: ./workflows/team-syncer
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    name: Sync teams
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./workflows/team-syncer
