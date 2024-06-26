@@ -1,34 +1,30 @@
 name: team-syncer
 
-on:
-  workflow_call:
-    inputs:
-      CONFIG_REPO:
-        description: 'Central repository containing the configuration file'
-        required: false
-        default: 'cloudoperators/common'
-      CONFIG_FILE_PATH:
-        description: 'Path to the configuration file in the central repository'
-        required: false
-        default: 'teams_config.yml'
+inputs:
+  CONFIG_REPO:
+    description: 'Central repository containing the configuration file'
+    required: false
+    default: 'cloudoperators/common'
+  CONFIG_FILE_PATH:
+    description: 'Path to the configuration file in the central repository'
+    required: false
+    default: 'teams_config.yml'
 
-jobs:
-  sync-teams:
-    runs-on: ubuntu-latest
+runs:
+  using: "composite"
+  steps:
+    - name: Set up environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq yq
 
-    steps:
-      - name: Set up environment
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq yq
-
-      - name: Sync teams to repository
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ORG: ${{ github.repository_owner }}
-          GITHUB_REPO: ${{ github.event.repository.name }}
-          CONFIG_REPO: ${{ inputs.CONFIG_REPO }}
-          CONFIG_FILE: ${{ inputs.CONFIG_FILE_PATH }}
-        run: |
-          chmod +x sync_teams.sh
-          ./sync_teams.sh
+    - name: Sync teams to repository
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_ORG: ${{ github.repository_owner }}
+        GITHUB_REPO: ${{ github.event.repository.name }}
+        CONFIG_REPO: ${{ inputs.CONFIG_REPO }}
+        CONFIG_FILE: ${{ inputs.CONFIG_FILE_PATH }}
+      run: |
+        chmod +x sync_teams.sh
+        ./sync_teams.sh
