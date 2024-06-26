@@ -19,3 +19,15 @@ jobs:
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+With a teams configuration:
+```yaml
+# The team-syncer ensures the following teams are configured in the repositories of this organization.
+teams:
+  - name: administrators
+    permission: admin
+  - name: developers
+    permission: maintain
+  - name: collaborators
+    permission: triage
+```
