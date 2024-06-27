@@ -29,7 +29,7 @@ runs:
     - name: Sync teams to repository
       shell: bash
       run: |
-        set -ex
+        set -e
 
         GITHUB_ORG=${{ github.repository_owner }}
         GITHUB_REPO=${{ github.event.repository.name }}
@@ -84,8 +84,7 @@ runs:
           team_name=$(echo "$team" | jq -r '.name')
           team_permission=$(echo "$team" | jq -r '.permission')
         
-          echo "Syncing team: $team_name with permission: $team_permission"
-          continue
+          echo "Syncing team: $team_name with permission: $team_permission to repository $GITHUB_ORG/$GITHUB_REPO"
           
           sync_teams_to_repo $team_name $team_permission
         done
