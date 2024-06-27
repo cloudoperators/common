@@ -29,7 +29,7 @@ runs:
     - name: Sync teams to repository
       shell: bash
       run: |
-        set -e
+        set -ex
 
         GITHUB_ORG=${{ github.repository_owner }}
         GITHUB_REPO=${{ github.event.repository.name }}
