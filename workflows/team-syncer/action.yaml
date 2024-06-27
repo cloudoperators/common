@@ -4,11 +4,11 @@ inputs:
   CONFIG_REPO:
     description: 'Central repository containing the configuration file'
     required: false
-    default: 'cloudoperators/common'
+    default: 'common'
   CONFIG_FILE:
     description: 'Path to the configuration file in the central repository'
     required: false
-    default: 'teams_config.yml'
+    default: 'teams_config.yaml'
   GITHUB_TOKEN:
     description: 'GITHUB_TOKEN to be stored as a secret'
     required: false
@@ -33,9 +33,8 @@ runs:
 
         GITHUB_ORG=${{ github.repository_owner }}
         GITHUB_REPO=${{ github.event.repository.name }}
-        ORG_NAME=${{ inputs.GITHUB_ORG }}
-        REPO_NAME=${{ inputs.GITHUB_REPO }}
-        CONFIG_REPO="${{ inputs.GITHUB_ORG }}/common"
+ 
+        CONFIG_REPO="${GITHUB_ORG}/common"
         CONFIG_FILE="${{ inputs.CONFIG_FILE }}"
         
         SUPPORTED_PERMISSIONS=("pull" "push" "admin" "maintain" "triage")
@@ -45,7 +44,7 @@ runs:
             -L "https://raw.githubusercontent.com/${CONFIG_REPO}/main/${CONFIG_FILE}" \
             -o $CONFIG_FILE
         }
-      
+        
         # Function to sync teams to a repository
         sync_teams_to_repo() {
           local team=$1
@@ -67,7 +66,7 @@ runs:
         
           curl -s -X PUT -H "Authorization: token ${{ inputs.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/orgs/$ORG_NAME/teams/$team/repos/$ORG_NAME/$REPO_NAME" \
+            "https://api.github.com/orgs/$GITHUB_ORG/teams/$team/repos/$GITHUB_ORG/$GITHUB_REPO" \
             -d "{\"permission\":\"$permission\"}"
         }
         
