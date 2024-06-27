@@ -26,7 +26,7 @@ runs:
         wget --no-verbose https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64.tar.gz -O - |\
           tar xz && mv yq_linux_amd64 /usr/local/bin/yq && chmod +x /usr/local/bin/yq
 
-    - name: Sync teams to repository
+    - name: Sync teams to rgepository
       shell: bash
       run: |
         set -ex
