@@ -5,10 +5,13 @@ inputs:
     description: 'Central repository containing the configuration file'
     required: false
     default: 'cloudoperators/common'
-  CONFIG_FILE_PATH:
+  CONFIG_FILE:
     description: 'Path to the configuration file in the central repository'
     required: false
     default: 'teams_config.yml'
+  GITHUB_TOKEN:
+    description: 'GITHUB_TOKEN to be stored as a secret'
+    required: false
 
 runs:
   using: "composite"
@@ -24,28 +27,23 @@ runs:
           tar xz && mv yq_linux_amd64 /usr/bin/yq
 
     - name: Sync teams to repository
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GITHUB_ORG: ${{ github.repository_owner }}
-        GITHUB_REPO: ${{ github.event.repository.name }}
-        CONFIG_REPO: ${{ inputs.CONFIG_REPO }}
-        CONFIG_FILE: ${{ inputs.CONFIG_FILE_PATH }}
       shell: bash
       run: |
         set -ex
+
+        GITHUB_ORG: ${{ github.repository_owner }}
+        GITHUB_REPO: ${{ github.event.repository.name }}
         
-        GITHUB_TOKEN=${GITHUB_TOKEN}
+        ORG_NAME=${{ inputs.GITHUB_ORG }}
+        REPO_NAME=${{ inputs.GITHUB_REPO }}
         
-        ORG_NAME=${GITHUB_ORG}
-        REPO_NAME=${GITHUB_REPO}
-        
-        CONFIG_REPO="${GITHUB_ORG}/common"
-        CONFIG_FILE="teams_config.yaml"
+        CONFIG_REPO="${{ inputs.GITHUB_ORG }}/common"
+        CONFIG_FILE="${{ inputs.CONFIG_FILE }}"
         
         SUPPORTED_PERMISSIONS=("pull" "push" "admin" "maintain" "triage")
         
         fetch_config() {
-          curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          curl -s -H "Authorization: token ${{ inputs.GITHUB_TOKEN }}" \
             -L "https://raw.githubusercontent.com/${CONFIG_REPO}/main/${CONFIG_FILE}" \
             -o $CONFIG_FILE
         }
@@ -69,7 +67,7 @@ runs:
             return
           fi
         
-          curl -s -X PUT -H "Authorization: token $GITHUB_TOKEN" \
+          curl -s -X PUT -H "Authorization: token ${{ inputs.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/orgs/$ORG_NAME/teams/$team/repos/$ORG_NAME/$REPO_NAME" \
             -d "{\"permission\":\"$permission\"}"
