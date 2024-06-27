@@ -26,17 +26,15 @@ runs:
         wget --no-verbose https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64.tar.gz -O - |\
           tar xz && mv yq_linux_amd64 /usr/local/bin/yq && chmod +x /usr/local/bin/yq
 
-    - name: Sync teams to rgepository
+    - name: Sync teams to repository
       shell: bash
       run: |
         set -ex
 
-        GITHUB_ORG: ${{ github.repository_owner }}
-        GITHUB_REPO: ${{ github.event.repository.name }}
-        
+        GITHUB_ORG=${{ github.repository_owner }}
+        GITHUB_REPO=${{ github.event.repository.name }}
         ORG_NAME=${{ inputs.GITHUB_ORG }}
         REPO_NAME=${{ inputs.GITHUB_REPO }}
-        
         CONFIG_REPO="${{ inputs.GITHUB_ORG }}/common"
         CONFIG_FILE="${{ inputs.CONFIG_FILE }}"
         
