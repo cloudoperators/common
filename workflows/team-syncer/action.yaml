@@ -1,4 +1,5 @@
 name: team-syncer
+description: Sync teams to all repositories within an organization
 
 inputs:
   CONFIG_REPO:
@@ -9,9 +10,9 @@ inputs:
     description: 'Path to the configuration file in the central repository'
     required: false
     default: 'teams_config.yaml'
-  GITHUB_TOKEN:
-    description: 'GITHUB_TOKEN to be stored as a secret'
-    required: false
+  GH_TOKEN:
+    description: 'GitHub token to be stored as a secret. Must have scopes: project, read:org, repo'
+    required: true
 
 runs:
   using: "composite"
@@ -29,26 +30,46 @@ runs:
     - name: Sync teams to repository
       shell: bash
       run: |
-        set -ex
+        set -e
 
         GITHUB_ORG=${{ github.repository_owner }}
-        GITHUB_REPO=${{ github.event.repository.name }}
- 
         CONFIG_REPO="${GITHUB_ORG}/common"
         CONFIG_FILE="${{ inputs.CONFIG_FILE }}"
         
         SUPPORTED_PERMISSIONS=("pull" "push" "admin" "maintain" "triage")
         
         fetch_config() {
-          curl -s -H "Authorization: token ${{ inputs.GITHUB_TOKEN }}" \
+          http_code=$(curl -s -w "%{http_code}" -H "Authorization: token ${{ inputs.GH_TOKEN }}" \
             -L "https://raw.githubusercontent.com/${CONFIG_REPO}/main/${CONFIG_FILE}" \
-            -o $CONFIG_FILE
+            -o $CONFIG_FILE)
+          if [[ $http_code == 4* ]]; then
+            echo "Fetch config failed with HTTP code $http_code"
+            exit 1
+          fi
         }
         
-        # Function to sync teams to a repository
+        function list_repos {
+          local page=1
+          local all_repos=()
+          
+          while true; do
+            response=$(curl -s -H "Authorization: token ${{ inputs.GH_TOKEN }}" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/$GITHUB_ORG/repos?page=$page&per_page=100")
+            repos=$(echo "$response" | jq -r '.[] | .name')
+            
+            all_repos+=($repos)
+            next_url=$(echo "$response" | grep -i '^Link:' | sed -n 's/.*<\(.*\)>; rel="next".*/\1/p')
+            if [ -z "$next_url" ]; then
+              break
+            fi
+            page=$((page + 1))
+          done
+          echo "${all_repos[@]}"
+        }
+        
         sync_teams_to_repo() {
           local team=$1
           local permission=$2
+          local repository=$3
         
           # Validate permission
           local valid_permission=false
@@ -64,13 +85,17 @@ runs:
             return
           fi
         
-          curl -s -X PUT -H "Authorization: token ${{ inputs.GITHUB_TOKEN }}" \
+          http_code=$(curl -s -w "%{http_code}" -X PUT -H "Authorization: token ${{ inputs.GH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/orgs/$GITHUB_ORG/teams/$team/repos/$GITHUB_ORG/$GITHUB_REPO" \
-            -d "{\"permission\":\"$permission\"}"
+            "https://api.github.com/orgs/$GITHUB_ORG/teams/$team/repos/$GITHUB_ORG/$repository" \
+            -d "{\"permission\":\"$permission\"}")
+          if [[ $http_code == 4* ]]; then
+            echo "Syncing team $team with permission $permission to repo $repo failed with HTTP code $http_code"
+            exit 1
+          fi
         }
         
-        # Sync the teams to the repository.
+        # Get the team configuration. 
         fetch_config
         teams=$(yq e '.teams' -o=json "$CONFIG_FILE")
 
@@ -80,11 +105,15 @@ runs:
           exit 1
         fi
         
+        # Get all repositories in the organization.
+        repositories=$(list_repos)
+        
         echo "$teams" | jq -c '.[]' | while read -r team; do
           team_name=$(echo "$team" | jq -r '.name')
           team_permission=$(echo "$team" | jq -r '.permission')
-        
-          echo "Syncing team: $team_name with permission: $team_permission to repository $GITHUB_ORG/$GITHUB_REPO"
           
-          sync_teams_to_repo $team_name $team_permission
+          for repo in $repositories; do
+            echo "Syncing team: $team_name with permission: $team_permission to repository $GITHUB_ORG/$repo"
+            sync_teams_to_repo $team_name $team_permission $repo
+          done
         done
