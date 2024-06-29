@@ -1,5 +1,7 @@
 # The team-syncer ensures the following teams are configured in the repositories of this organization.
 teams:
+  - name: organization-administrators
+    permission: admin
   - name: administrators
     permission: admin
   - name: developers
