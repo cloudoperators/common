@@ -1,6 +1,11 @@
 name: Sync teams
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - teams_config.yaml
   schedule:
     - cron: '0 * * * *'  # Every hour.
 
