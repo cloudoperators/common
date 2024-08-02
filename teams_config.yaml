@@ -7,4 +7,4 @@ teams:
   - name: developers
     permission: maintain
   - name: collaborators
-    permission: write
+    permission: push
