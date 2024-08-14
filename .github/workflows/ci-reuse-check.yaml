@@ -6,7 +6,5 @@ jobs:
   test:
     runs-on: [ default ]
     steps:
-    - uses: actions/checkout@v4
     - name: REUSE Compliance Check
-      uses: ./workflows/ci-reuse-check.yaml
-      
+      uses: cloudoperators/common/workflows/ci-reuse-check.yaml@main
