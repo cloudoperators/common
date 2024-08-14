@@ -1,0 +1,20 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "assigneesFromCodeOwners": true,
+    "extends": [
+      "config:recommended"
+    ],
+    "packageRules": [
+      {
+        "groupName": "github actions",
+        "matchManagers": ["github-actions"],
+        "matchUpdateTypes": ["major", "minor", "patch"],
+        "extends": [
+          "helpers:pinGitHubActionDigests"
+        ],
+        "minimumReleaseAge": "14 days"
+      }
+    ],
+    "separateMinorPatch": true
+  }
+  
