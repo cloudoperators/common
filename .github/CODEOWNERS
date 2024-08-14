@@ -1,0 +1,11 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+*                       @cloudoperators/Administrators
+
+/.github/               @cloudoperators/Administrators
+/.github/workflows/     @cloudoperators/greenhouse-core
+/workflows/             @cloudoperators/greenhouse-core
+
+.gitignore              @cloudoperators/greenhouse-core
+/README.md              @cloudoperators/greenhouse-core
+/teams_config.yaml      @cloudoperators/Administrators
