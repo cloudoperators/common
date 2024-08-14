@@ -8,4 +8,5 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: REUSE Compliance Check
-      uses: ./workflows/ci-reuse-check.yaml@main
+      uses: ./workflows/ci-reuse-check.yaml
+      
