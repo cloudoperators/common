@@ -1,11 +1,17 @@
 name: Close inactive issues
+
 on:
-  schedule:
-    - cron: "35 1 * * *"
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job"
+        required: false
+        default: "default"
+        type: string
 
 jobs:
   close-issues:
-    runs-on: [ default ]
+    runs-on: ${{ inputs.runs-on}}
     permissions:
       issues: write
       pull-requests: write

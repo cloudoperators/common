@@ -1,12 +1,18 @@
 name: Check & Fix License Header
+
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job"
+        required: false
+        default: "default"
+        type: string
 
 jobs:
   build-license-eye:
     name: Build LicenseEye
-    runs-on: [ default ]
+    runs-on: ${{ inputs.runs-on}}
     permissions:
       contents: write
 

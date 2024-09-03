@@ -1,0 +1,23 @@
+name: REUSE Compliance Check
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job"
+        required: false
+        default: "default"
+        type: string
+
+jobs:
+  reuse:
+    runs-on: ${{ inputs.runs-on}}
+    steps:
+    - name: Print Inputs
+      run: |
+        echo "====${{ github.workflow }} Inputs===="
+        echo "Inputs: ${{ toJson(inputs) }}"
+        echo "===="
+    - uses: actions/checkout@v4
+    - name: REUSE Compliance Check
+      uses: fsfe/reuse-action@v4
