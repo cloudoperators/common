@@ -1,0 +1,7 @@
+name: REUSE Compliance Check
+
+on: [pull_request]
+
+jobs:
+  reuse:
+    uses: cloudoperators/common/.github/workflows/shared-stale.yaml@main

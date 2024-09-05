@@ -13,11 +13,6 @@ jobs:
   reuse:
     runs-on: ${{ inputs.runs-on}}
     steps:
-    - name: Print Inputs
-      run: |
-        echo "====${{ github.workflow }} Inputs===="
-        echo "Inputs: ${{ toJson(inputs) }}"
-        echo "===="
     - uses: actions/checkout@v4
     - name: REUSE Compliance Check
       uses: fsfe/reuse-action@v4
