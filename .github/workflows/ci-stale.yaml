@@ -1,6 +1,8 @@
 name: Close inactive issues
 
-on: [pull_request]
+on:
+  schedule:
+    - cron: "37 1 * * *"
 
 jobs:
   reuse:
