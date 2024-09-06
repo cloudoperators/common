@@ -1,0 +1,71 @@
+name: Close inactive issues
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job"
+        required: false
+        default: "default"
+        type: string
+      days-before-issue-stale:
+        default: 90
+        required: false
+        type: number
+      days-before-issue-close:
+        default: 14
+        required: false
+        type: number
+      days-before-pr-stale:
+        default: 45
+        required: false
+        type: number
+      days-before-pr-close:
+        default: 14
+        required: false
+        type: number
+      stale-issue-label:
+        default: "stale"
+        required: false
+        type: string        
+      stale-pr-label:
+        default: "stale"
+        required: false
+        type: string
+      exempt-draft-pr:
+        default: true
+        required: false
+        type: boolean
+      exempt-issue-labels:
+        default: "pinned,security,backlog,bug"
+        required: false
+        type: string
+      exempt-pr-labels:        
+        default: "pinned,security,backlog,bug"
+        required: false
+        type: string
+      
+
+jobs:
+  close-issues:
+    runs-on: ${{ inputs.runs-on}}
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-issue-stale: ${{ inputs.days-before-issue-stale }}
+          days-before-issue-close: ${{ inputs.days-before-issue-close }}
+          days-before-pr-stale: ${{ inputs.days-before-pr-stale }}
+          days-before-pr-close: ${{ inputs.days-before-pr-close }}
+          stale-issue-label: ${{ inputs.stale-issue-label }}
+          stale-issue-message: "This issue is stale because it has been open for ${{ inputs.days-before-issue-stale }} days with no activity."
+          close-issue-message: "This issue was closed because it has been inactive for ${{ inputs.days-before-issue-close }} days since being marked as stale."
+          stale-pr-label: ${{ inputs.stale-pr-label }}
+          stale-pr-message: "This PR is stale because it has been open for ${{ inputs.days-before-pr-stale }} days with no activity."
+          close-pr-message: "This PR was closed because it has been inactive for ${{ inputs.days-before-pr-close }} days since being marked as stale."
+          exempt-issue-labels: ${{ inputs.exempt-issue-labels }}
+          exempt-pr-labels: ${{ inputs.exempt-pr-labels }}
+          exempt-draft-pr: ${{ inputs.exempt-draft-pr }}

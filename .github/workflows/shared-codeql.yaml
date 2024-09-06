@@ -1,0 +1,134 @@
+name: "Shared-CodeQL"
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job"
+        required: false
+        default: "['default']"
+        type: string
+      language:
+        description: "The language to run the analysis on"
+        required: true
+        default: "['go']"
+        type: string
+      go-check:
+        description: "Run Go check on code"
+        required: true
+        default: false
+        type: boolean
+      go-version:
+        description: "Go version"
+        default: "['1.22']"
+        required: false
+        type: string
+      node-check:
+        description: "Run Node check on code"
+        required: true
+        default: false
+        type: boolean
+      node-version:
+        description: "Node version"
+        default: "['node']"
+        required: false
+        type: string
+      fail-fast:
+        default: false
+        description: "Whether to fail fast or not"
+        required: false
+        type: boolean
+      autobuild:
+        default: true
+        description: "Use autobuild"
+        required: true
+        type: boolean
+      build_query:
+        description: Custom build query
+        required: false
+        type: string
+      timeout:
+        default: 360
+        description: The number of minutes to wait for the operation to complete.
+        required: false
+        type: number
+
+jobs:
+  define-matrix:
+    runs-on: ubuntu-latest
+
+    outputs:
+      go-version: ${{ steps.input.outputs.go-version }}
+      node-version: ${{ steps.input.outputs.node-version }}
+      custom_build: ${{ steps.input.outputs.custom_build }}
+      build_query: ${{ steps.input.outputs.build_query }}
+
+    steps:
+    - name: Go && Node check
+      id: input
+      shell: bash
+      run: |
+        if [ "${{ inputs.go-version }}" != "" ]; then
+          echo "go-version=${{ inputs.go-version }}" >> "$GITHUB_OUTPUT"
+        fi
+        if [ "${{ inputs.node-version }}" != "" ]; then
+          echo "node-version=${{ inputs.node-version }}" >> "$GITHUB_OUTPUT"
+        fi
+        if [ "${{ inputs.build_query }}" == "" ] && [ ${{ inputs.autobuild }} == false ]; then
+          echo "custom_build=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "custom_build=true" >> "$GITHUB_OUTPUT"
+          echo "build_query=${{ inputs.build_query }}" >> "$GITHUB_OUTPUT"
+        fi
+          
+  analyze:
+    name: Analyze
+    runs-on: ${{ matrix.os }}
+    needs: define-matrix
+    timeout-minutes: ${{ inputs.timeout }}
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: ${{ inputs.fail-fast }}
+      matrix:
+        os: ${{ fromJson(inputs.runs-on) }}
+        language: ${{ fromJson(inputs.language) }}
+        go-version: ${{ fromJSON(needs.define-matrix.outputs.go-version) }}
+        node-version: ${{ fromJSON(needs.define-matrix.outputs.node-version) }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      if: inputs.go-check == true
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      if: inputs.node-check == true
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+
+    - name: Autobuild
+      if: inputs.autobuild == true
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Build
+      if: needs.define-matrix.outputs.custom_build == 'true'
+      run: ${{ needs.define-matrix.outputs.build_query }}
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
