@@ -1,4 +1,4 @@
-name: REUSE Compliance Check
+name: Shared REUSE Compliance Check
 
 on:
   workflow_call:

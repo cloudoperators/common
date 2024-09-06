@@ -1,4 +1,4 @@
-name: Check & Fix License Header
+name: Shared Check & Fix License Header
 
 on:
   workflow_call:

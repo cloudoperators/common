@@ -1,4 +1,4 @@
-name: Close inactive issues
+name: Shared Close inactive issues
 
 on:
   workflow_call:
