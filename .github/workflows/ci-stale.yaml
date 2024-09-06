@@ -5,5 +5,8 @@ on:
     - cron: "37 1 * * *"
 
 jobs:
-  reuse:
+  stale:
+    permissions:
+      issues: write
+      pull-requests: write
     uses: cloudoperators/common/.github/workflows/shared-stale.yaml@main
