@@ -1,4 +1,4 @@
-name: REUSE Compliance Check
+name: Close inactive issues
 
 on: [pull_request]
 
