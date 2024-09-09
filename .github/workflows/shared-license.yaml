@@ -8,13 +8,18 @@ on:
         required: false
         default: "default"
         type: string
+      apply_header:
+        description: "Apply automatically license header"
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   build-license-eye:
     name: Build LicenseEye
     runs-on: ${{ inputs.runs-on}}
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout
@@ -30,6 +35,14 @@ jobs:
             config: .github/licenserc.yaml
             mode: fix
 
+  apply-license-header:
+    name: Apply LicenceHeader
+    if: inputs.apply_header == true
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: write
+
+    steps:
       - name: Apply Changes
         uses: EndBug/add-and-commit@v9
         env:
