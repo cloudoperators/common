@@ -1,0 +1,105 @@
+name: "e2e-workflow"
+description: "Run Greenhouse E2E test against a Kubernetes cluster"
+inputs:
+  admin-cluster-name:
+    description: "The kind cluster name"
+    required: false
+    default: "greenhouse-admin"
+  remote-cluster-name:
+    description: "The kind cluster name"
+    required: false
+    default: "greenhouse-remote"
+  namespace:
+    description: "The namespcace to be created in the kind cluster"
+    required: false
+    default: "greenhouse"
+  kubernetes-version:
+    description: "The Kubernetes version used to spin up clusters"
+    required: false
+    default: "v1.30.4"
+  go-version:
+    description: "The Go version to build greenhousectl"
+    required: false
+    default: "1.23"
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout tools repo
+      uses: actions/checkout@v4
+      with:
+        repository: cloudoperators/greenhouse
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+    - name: Build greenhousectl
+      shell: bash
+      run: |
+        make build-greenhousectl
+    - name: Create k8s Kind Cluster
+      uses: helm/kind-action@v1.10.0
+      with:
+        install_only: true
+    - name: compose config.json
+      shell: bash
+      run: |
+        cat << EOF > $RUNNER_TEMP/config.json
+        {
+            "config":[
+              {
+                  "cluster":{
+                    "name": "${{ inputs.remote-cluster-name }}",
+                    "version": "${{ inputs.kubernetes-version }}"
+                  }
+              },
+              {
+                  "cluster":{
+                    "name": "${{ inputs.admin-cluster-name }}",
+                    "namespace": "${{ inputs.namespace }}",
+                    "version": "${{ inputs.kubernetes-version }}"
+                  },
+                  "dependencies":[
+                    {
+                        "manifest":{
+                          "release":"greenhouse",
+                          "chartPath":"charts/idproxy",
+                          "crdOnly":true
+                        }
+                    },
+                    {
+                        "manifest":{
+                          "release":"greenhouse",
+                          "chartPath":"charts/manager",
+                          "valuesPath":"dev-env/localenv/sample.values.yaml",
+                          "crdOnly":false,
+                          "webhook":{
+                              "devMode":false,
+                              "dockerFile":"./",
+                              "envs":[
+                                {
+                                    "name":"CONTROLLERS_ONLY",
+                                    "value":"true"
+                                }
+                              ]
+                          }
+                        }
+                    }
+                  ]
+              }
+            ]
+        }
+        EOF
+    - name: run greenhousectl
+      shell: bash
+      run: |
+        bin/greenhousectl dev setup -f $RUNNER_TEMP/config.json
+    - name: export kubeconfig
+      shell: bash
+      run: |
+        kind export kubeconfig --name ${{ inputs.admin-cluster-name }} --kubeconfig $RUNNER_TEMP/e2e.kubeconfig
+        kind export kubeconfig --internal --name ${{ inputs.admin-cluster-name }} --kubeconfig $RUNNER_TEMP/e2e.internal.kubeconfig
+    - name: run e2e test
+      shell: bash
+      run: |
+        sleep 30s
+        USE_EXISTING_CLUSTER=true TEST_KUBECONFIG=$RUNNER_TEMP/e2e.kubeconfig INTERNAL_KUBECONFIG=$RUNNER_TEMP/e2e.internal.kubeconfig go test ./test/e2e/... -coverprofile cover.out -v
