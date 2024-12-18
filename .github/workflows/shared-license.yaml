@@ -14,7 +14,7 @@ on:
         default: true
         type: boolean
     secrets:
-      github_token:
+      pas:
         description: "The token to use for the job"
         required: false
 
@@ -51,7 +51,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.github_token != '' && secrets.github_token || secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.pas != '' && secrets.pas || secrets.GITHUB_TOKEN }}
         repository: ${{ github.event.pull_request.head.repo.full_name }}
         ref: ${{ github.event.pull_request.head.ref }}
 
