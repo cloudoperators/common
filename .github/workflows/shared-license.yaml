@@ -13,10 +13,10 @@ on:
         required: false
         default: true
         type: boolean
+    secrets:
       github_token:
         description: "The token to use for the job"
         required: false
-        type: string
 
 jobs:
   build-license-eye:
@@ -51,7 +51,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        token: ${{ inputs.github_token != '' && inputs.github_token || secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.github_token != '' && secrets.github_token || secrets.GITHUB_TOKEN }}
         repository: ${{ github.event.pull_request.head.repo.full_name }}
         ref: ${{ github.event.pull_request.head.ref }}
 
