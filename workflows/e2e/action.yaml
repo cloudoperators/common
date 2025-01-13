@@ -15,6 +15,10 @@ inputs:
   scenario:
     description: "The E2E scenario to run"
     required: true
+outputs:
+  result:
+    description: "The path to the E2E test results"
+    value: ${{ steps.e2e.outputs.result }}
 
 runs:
   using: "composite"
