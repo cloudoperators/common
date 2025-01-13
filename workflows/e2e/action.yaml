@@ -33,7 +33,6 @@ runs:
       uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
-        token: ${{ secrets.GITHUB_TOKEN }}
 
     # Create the admin cluster with latest kubernetes version
     - name: Create Admin Cluster
