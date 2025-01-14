@@ -1,4 +1,4 @@
-name: "e2e-workflow"
+name: "E2E Workflow"
 description: "Run Greenhouse E2E test against a Kubernetes cluster"
 inputs:
   admin-cluster-name:
@@ -9,97 +9,69 @@ inputs:
     description: "The kind cluster name"
     required: false
     default: "greenhouse-remote"
-  namespace:
-    description: "The namespcace to be created in the kind cluster"
-    required: false
-    default: "greenhouse"
-  kubernetes-version:
+  k8s-version:
     description: "The Kubernetes version used to spin up clusters"
-    required: false
-    default: "v1.30.4"
-  go-version:
-    description: "The Go version to build greenhousectl"
-    required: false
-    default: "1.23"
+    required: true
+  scenario:
+    description: "The E2E scenario to run"
+    required: true
+outputs:
+  result:
+    description: "The path to the E2E test results"
+    value: ${{ steps.e2e.outputs.result }}
+
 runs:
   using: "composite"
   steps:
-    - name: Checkout tools repo
+
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
         repository: cloudoperators/greenhouse
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: ${{ inputs.go-version }}
-    - name: Build greenhousectl
-      shell: bash
-      run: |
-        make build-greenhousectl
-    - name: Create k8s Kind Cluster
-      uses: helm/kind-action@v1.11.0
+        go-version-file: 'go.mod'
+
+    # Create the admin cluster with latest kubernetes version
+    - name: Create Admin Cluster
+      uses: helm/kind-action@v1.12.0
       with:
-        install_only: true
-    - name: compose config.json
+        cluster_name: ${{ inputs.admin-cluster-name }}
+        node_image: 'kindest/node:v1.31.0'
+
+    # Create the remote cluster with kubernetes version from the matrix
+    - name: Create Remote Cluster
+      uses: helm/kind-action@v1.12.0
+      with:
+        node_image: 'kindest/node:${{ inputs.k8s-version }}'
+        cluster_name: ${{ inputs.remote-cluster-name }}
+        config: ${{ github.workspace }}/e2e/kind-config.yaml
+
+    # build CLI, setup e2e environment and prepare kubeconfigs
+    - name: "Prepare E2E Config"
       shell: bash
+      id: config
       run: |
-        cat << EOF > $RUNNER_TEMP/config.json
-        {
-            "config":[
-              {
-                  "cluster":{
-                    "name": "${{ inputs.remote-cluster-name }}",
-                    "version": "${{ inputs.kubernetes-version }}"
-                  }
-              },
-              {
-                  "cluster":{
-                    "name": "${{ inputs.admin-cluster-name }}",
-                    "namespace": "${{ inputs.namespace }}",
-                    "version": "${{ inputs.kubernetes-version }}"
-                  },
-                  "dependencies":[
-                    {
-                        "manifest":{
-                          "release":"greenhouse",
-                          "chartPath":"charts/idproxy",
-                          "crdOnly":true
-                        }
-                    },
-                    {
-                        "manifest":{
-                          "release":"greenhouse",
-                          "chartPath":"charts/manager",
-                          "valuesPath":"dev-env/localenv/sample.values.yaml",
-                          "crdOnly":false,
-                          "webhook":{
-                              "devMode":false,
-                              "dockerFile":"./",
-                              "envs":[
-                                {
-                                    "name":"CONTROLLERS_ONLY",
-                                    "value":"true"
-                                }
-                              ]
-                          }
-                        }
-                    }
-                  ]
-              }
-            ]
-        }
-        EOF
-    - name: run greenhousectl
+        make setup-e2e
+        echo "admin_config=$GITHUB_WORKSPACE/bin/${{inputs.admin-cluster-name}}.kubeconfig" >> $GITHUB_OUTPUT
+        echo "remote_config=$GITHUB_WORKSPACE/bin/${{inputs.remote-cluster-name}}.kubeconfig" >> $GITHUB_OUTPUT
+        echo "remote_int_config=$GITHUB_WORKSPACE/bin/${{inputs.remote-cluster-name}}-int.kubeconfig" >> $GITHUB_OUTPUT
+
+    # run the e2e tests with the scenario from the matrix
+    - name: "E2E Run"
       shell: bash
+      id: e2e
+      continue-on-error: true
+      env:
+        SCENARIO: ${{ inputs.scenario }}
+        EXECUTION_ENV: gh-actions
+        GREENHOUSE_ADMIN_KUBECONFIG: ${{ steps.config.outputs.admin_config }}
+        GREENHOUSE_REMOTE_KUBECONFIG: ${{ steps.config.outputs.remote_config }}
+        GREENHOUSE_REMOTE_INT_KUBECONFIG: ${{ steps.config.outputs.remote_int_config }}
+        CONTROLLER_LOGS_PATH: ${{github.workspace}}/bin/${{inputs.scenario}}-${{inputs.k8s-version}}.txt
+        E2E_REPORT_PATH: ${{github.workspace}}/bin/${{inputs.scenario}}-${{matrix.k8s-version}}.json
       run: |
-        bin/greenhousectl dev setup -f $RUNNER_TEMP/config.json
-    - name: export kubeconfig
-      shell: bash
-      run: |
-        kind export kubeconfig --name ${{ inputs.admin-cluster-name }} --kubeconfig $RUNNER_TEMP/e2e.kubeconfig
-        kind export kubeconfig --internal --name ${{ inputs.admin-cluster-name }} --kubeconfig $RUNNER_TEMP/e2e.internal.kubeconfig
-    - name: run e2e test
-      shell: bash
-      run: |
-        sleep 30s
-        USE_EXISTING_CLUSTER=true TEST_KUBECONFIG=$RUNNER_TEMP/e2e.kubeconfig INTERNAL_KUBECONFIG=$RUNNER_TEMP/e2e.internal.kubeconfig go test ./test/e2e/... -coverprofile cover.out -v
+        echo "result=$CONTROLLER_LOGS_PATH" >> $GITHUB_OUTPUT
+        make e2e
