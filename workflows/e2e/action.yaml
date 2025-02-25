@@ -69,6 +69,14 @@ runs:
         cluster_name: ${{ inputs.remote-cluster-name }}
         config: ${{ inputs.kind-config }}
 
+    - name: Post Setup Remote Cluster
+      shell: bash
+      env:
+        KUBECONFIG: ${{ runner.temp }}/remote-kubeconfig.yaml
+      run: |
+        kind get kubeconfig --name ${{ inputs.remote-cluster-name }} > ${{ runner.temp }}/remote-kubeconfig.yaml
+        kubectl logs -n kube-system kube-apiserver-${{ inputs.remote-cluster-name }}-control-plane     
+
     # build CLI, setup e2e environment and prepare kubeconfigs
     - name: "Prepare E2E Config"
       shell: bash
