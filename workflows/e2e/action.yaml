@@ -12,8 +12,12 @@ inputs:
   k8s-version:
     description: "The Kubernetes version used to spin up clusters"
     required: true
-  kind-config:
-    description: "The kind cluster configuration file"
+  admin-config:
+    description: "The kind cluster configuration file for admin cluster"
+    required: false
+    default: ""
+  remote-config:
+    description: "The kind cluster configuration file for remote cluster"
     required: false
     default: ""
   scenario:
