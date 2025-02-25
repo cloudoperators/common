@@ -12,6 +12,14 @@ inputs:
   k8s-version:
     description: "The Kubernetes version used to spin up clusters"
     required: true
+  admin-config:
+    description: "The kind cluster configuration file for admin cluster"
+    required: false
+    default: ""
+  remote-config:
+    description: "The kind cluster configuration file for remote cluster"
+    required: false
+    default: ""
   scenario:
     description: "The E2E scenario to run"
     required: true
@@ -40,6 +48,21 @@ runs:
       with:
         cluster_name: ${{ inputs.admin-cluster-name }}
         node_image: 'kindest/node:v1.31.0'
+        config: ${{ inputs.admin-config }}
+
+    # after admin cluster setup, extract the apiServer CA from kube-root-ca.crt configmap (needed for remote cluster OIDC setup)
+    # and create a clusterrolebinding to allow unauthenticated access to the admin cluster for OIDC discovery
+    - name: Post Setup Admin Cluster
+      shell: bash
+      env:
+        KUBECONFIG: ${{ runner.temp }}/admin-kubeconfig.yaml
+      run: |
+        mkdir -p bin
+        kind get kubeconfig --name ${{ inputs.admin-cluster-name }} > ${{ runner.temp }}/admin-kubeconfig.yaml
+        kubectl get cm kube-root-ca.crt -n default -o json | jq -r '.data."ca.crt"' > bin/greenhouse-admin-ca.crt
+        kubectl create clusterrolebinding "oidc-reviewer-binding" \
+          --clusterrole="system:service-account-issuer-discovery" \
+          --group="system:unauthenticated"
 
     # Create the remote cluster with kubernetes version from the matrix
     - name: Create Remote Cluster
@@ -47,7 +70,7 @@ runs:
       with:
         node_image: 'kindest/node:${{ inputs.k8s-version }}'
         cluster_name: ${{ inputs.remote-cluster-name }}
-        config: ${{ github.workspace }}/e2e/kind-config.yaml
+        config: ${{ inputs.remote-config }}
 
     # build CLI, setup e2e environment and prepare kubeconfigs
     - name: "Prepare E2E Config"
