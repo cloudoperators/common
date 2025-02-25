@@ -50,6 +50,8 @@ runs:
         node_image: 'kindest/node:v1.31.0'
         config: ${{ inputs.admin-config }}
 
+    # after admin cluster setup, extract the apiServer CA from kube-root-ca.crt configmap (needed for remote cluster OIDC setup)
+    # and create a clusterrolebinding to allow unauthenticated access to the admin cluster for OIDC discovery
     - name: Post Setup Admin Cluster
       shell: bash
       env:
