@@ -101,34 +101,34 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: Set up Go
       if: inputs.go-check == true
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
       with:
         go-version: ${{ matrix.go-version }}
     
     - name: Use Node.js ${{ matrix.node-version }}
       if: inputs.node-check == true
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4
       with:
         node-version: ${{ matrix.node-version }}
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@6bb031afdd8eb862ea3fc1848194185e076637e5 # v3
       with:
         languages: ${{ matrix.language }}
 
     - name: Autobuild
       if: inputs.autobuild == true
-      uses: github/codeql-action/autobuild@v3
+      uses: github/codeql-action/autobuild@6bb031afdd8eb862ea3fc1848194185e076637e5 # v3
 
     - name: Build
       if: needs.define-matrix.outputs.custom_build == 'true'
       run: ${{ needs.define-matrix.outputs.build_query }}
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@6bb031afdd8eb862ea3fc1848194185e076637e5 # v3
       with:
         category: "/language:${{matrix.language}}"
