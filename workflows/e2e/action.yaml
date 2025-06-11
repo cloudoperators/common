@@ -87,7 +87,6 @@ runs:
     - name: "E2E Run"
       shell: bash
       id: e2e
-      continue-on-error: true
       env:
         SCENARIO: ${{ inputs.scenario }}
         EXECUTION_ENV: gh-actions
