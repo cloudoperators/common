@@ -6,7 +6,7 @@ on:
       runs-on:
         description: "The runner to use for the job"
         required: false
-        default: "default"
+        default: "unbuntu-latest"
         type: string
       apply_header:
         description: "Apply automatically license header"
