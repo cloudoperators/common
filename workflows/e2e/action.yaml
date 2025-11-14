@@ -60,7 +60,8 @@ runs:
         mkdir -p bin
         kind get kubeconfig --name ${{ inputs.admin-cluster-name }} > ${{ runner.temp }}/admin-kubeconfig.yaml
         kubectl get cm kube-root-ca.crt -n default -o json | jq -r '.data."ca.crt"' > bin/greenhouse-admin-ca.crt
-        yq eval --inplace '.jwt[0].issuer.certificateAuthority = load_str("./bin/greenhouse-admin-ca.crt")' ./dev-env/structured-auth.yaml
+        cp ./dev-env/structured-auth.yaml ./bin/structured-auth.yaml
+        yq eval --inplace '.jwt[0].issuer.certificateAuthority = load_str("./bin/greenhouse-admin-ca.crt")' ./bin/structured-auth.yaml
         kubectl create clusterrolebinding "oidc-reviewer-binding" \
           --clusterrole="system:service-account-issuer-discovery" \
           --group="system:unauthenticated"
