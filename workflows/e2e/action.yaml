@@ -47,7 +47,7 @@ runs:
       uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
       with:
         cluster_name: ${{ inputs.admin-cluster-name }}
-        node_image: 'kindest/node:v1.31.0'
+        node_image: 'kindest/node:v1.33.4'
         config: ${{ inputs.admin-config }}
 
     # after admin cluster setup, extract the apiServer CA from kube-root-ca.crt configmap (needed for remote cluster OIDC setup)
