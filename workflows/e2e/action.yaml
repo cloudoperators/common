@@ -9,8 +9,11 @@ inputs:
     description: "The kind cluster name"
     required: false
     default: "greenhouse-remote"
-  k8s-version:
-    description: "The Kubernetes version used to spin up clusters"
+  remote-k8s-version:
+    description: "The Kubernetes version used to spin up remote cluster"
+    required: true
+  admin-k8s-version:
+    description: "The Kubernetes version used to spin up admin cluster"
     required: true
   admin-config:
     description: "The kind cluster configuration file for admin cluster"
