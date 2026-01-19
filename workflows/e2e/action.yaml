@@ -47,7 +47,7 @@ runs:
 
     # Create the admin cluster with latest kubernetes version
     - name: Create Admin Cluster
-      uses: helm/kind-action@61275cc80d0798a405cb070f7d3a8aaf7cf2c2c1 # v1.13.0
+      uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
       with:
         cluster_name: ${{ inputs.admin-cluster-name }}
         node_image: 'kindest/node:${{ inputs.admin-k8s-version }}'
@@ -71,7 +71,7 @@ runs:
 
     # Create the remote cluster with kubernetes version from the matrix
     - name: Create Remote Cluster
-      uses: helm/kind-action@61275cc80d0798a405cb070f7d3a8aaf7cf2c2c1 # v1.13.0
+      uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
       with:
         node_image: 'kindest/node:${{ inputs.remote-k8s-version }}'
         cluster_name: ${{ inputs.remote-cluster-name }}
