@@ -63,9 +63,8 @@ jobs:
 
     - name: Apply Changes
       uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9
-      env:
-          GITHUB_TOKEN: ${{ secrets.pas != '' && secrets.pas || secrets.GITHUB_TOKEN }}
       with:
           author_name: License Bot
           author_email: license_bot@github.com
           message: 'Automatic application of license header'
+          github_token: ${{ secrets.pas != '' && secrets.pas || secrets.GITHUB_TOKEN }}
