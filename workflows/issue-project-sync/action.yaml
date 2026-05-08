@@ -35,7 +35,7 @@ runs:
             }
           }' -f org="$ORG" -F number="$PROJECT_NUMBER" --jq '.data.organization.projectV2.id')
 
-        if [ -z "$PROJECT_ID" ]; then
+        if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "null" ]; then
           echo "ERROR: Could not find project #${PROJECT_NUMBER} in org ${ORG}"
           exit 1
         fi

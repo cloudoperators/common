@@ -4,7 +4,7 @@ A reusable composite action that automatically labels new issues with `needs-tri
 
 ## Usage
 
-Create `.github/workflows/issue-triage.yml` in your repository:
+Create `.github/workflows/issue-triage.yaml` in your repository:
 
 ```yaml
 name: Issue Triage
@@ -12,12 +12,17 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  issues: write
+
 jobs:
   triage:
     runs-on: ubuntu-latest
     steps:
       - uses: cloudoperators/common/workflows/issue-triage@main
 ```
+
+> **Important:** The calling workflow **must** declare `permissions: issues: write`. Without this, the action will fail in repos/orgs where the default `GITHUB_TOKEN` is read-only.
 
 ## What it does
 
@@ -30,7 +35,8 @@ jobs:
 ## Prerequisites
 
 - The `needs-triage` label must exist in the repository (see label setup below)
-- The default `GITHUB_TOKEN` is sufficient — no additional secrets needed
+- The calling workflow must grant `permissions: issues: write`
+- The default `GITHUB_TOKEN` is sufficient for the token — no additional secrets needed
 
 ## Label Setup
 

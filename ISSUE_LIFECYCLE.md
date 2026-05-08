@@ -10,7 +10,7 @@ flowchart TD
     B --> C{Triage}
 
     C -->|clear & well-scoped| D[label: backlog]
-    C -->|unclear scope| E[label: needs-refinement]
+    C -->|unclear scope| E[labels: needs-refinement + backlog]
     C -->|duplicate / out of scope / won't fix| F([Closed])
     C -->|missing info| G[label: needs-more-info]
 
