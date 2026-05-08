@@ -1,0 +1,36 @@
+name: issue-triage
+description: Auto-label new issues with needs-triage and post a welcome comment
+
+inputs:
+  GH_TOKEN:
+    description: 'GitHub token with issues write permission. Can use the default GITHUB_TOKEN.'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Add needs-triage label
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.GH_TOKEN }}
+        ISSUE_URL: ${{ github.event.issue.html_url }}
+      run: |
+        gh issue edit "$ISSUE_URL" --add-label "needs-triage"
+
+    - name: Post welcome comment
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.GH_TOKEN }}
+        ISSUE_URL: ${{ github.event.issue.html_url }}
+      run: |
+        gh issue comment "$ISSUE_URL" --body "Thanks for opening this issue! 🎉
+
+        A maintainer will triage it within 5 business days. You can learn more about our issue workflow in the [Issue Lifecycle documentation](https://github.com/cloudoperators/common/blob/main/ISSUE_LIFECYCLE.md).
+
+        In the meantime, please make sure you have provided:
+        - A clear problem statement
+        - Steps to reproduce (for bugs)
+        - Expected vs actual behavior
+
+        This helps us route your issue faster."

@@ -33,6 +33,16 @@ The following rule governs code contributions:
 
 ## Issues and Planning
 
-* We use GitHub issues to track bugs and enhancement requests.
+We follow a shared issue lifecycle across all `cloudoperators` repositories. See the **[Issue Lifecycle documentation](./ISSUE_LIFECYCLE.md)** for the full process including:
 
-* Please provide as much context as possible when you open an issue. The information you provide must be comprehensive enough to reproduce that issue for the assignee.
+* Automatic triage labeling
+* Triage decision matrix
+* Definition of Ready
+* Refinement workflow
+* Sprint/quarter planning
+
+Quick links:
+
+* [Issues needing triage (org-wide)](https://github.com/issues?q=org%3Acloudoperators+label%3Aneeds-triage+is%3Aopen+sort%3Acreated-asc)
+* [Backlog (org-wide)](https://github.com/issues?q=org%3Acloudoperators+label%3Abacklog+is%3Aopen)
+* [Project board](https://github.com/orgs/cloudoperators/projects/9)
