@@ -1,16 +1,19 @@
 # Issue Project Sync Workflow
 
-A reusable composite action that automatically adds issues to [cloudoperators project #9](https://github.com/orgs/cloudoperators/projects/9) when the `backlog` label is applied.
+A reusable composite action that automatically adds issues to [cloudoperators project #9](https://github.com/orgs/cloudoperators/projects/9) when the `backlog` label is applied. Uses the official [actions/add-to-project](https://github.com/actions/add-to-project) action under the hood.
 
 ## Usage
 
-Create `.github/workflows/issue-project-sync.yml` in your repository:
+Create `.github/workflows/issue-project-sync.yaml` in your repository:
 
 ```yaml
 name: Issue Project Sync
 on:
   issues:
     types: [labeled]
+
+permissions:
+  issues: read
 
 jobs:
   sync:
@@ -26,7 +29,7 @@ jobs:
 
 1. Triggered when any label is added to an issue
 2. Filters to only run when the `backlog` label is applied
-3. Uses the GitHub GraphQL API to add the issue to the organization project
+3. Uses `actions/add-to-project` to add the issue to the organization project
 
 ## Prerequisites
 
@@ -61,14 +64,4 @@ gh label create "backlog" --color "0e8a16" --description "Ready for sprint plann
 | Input | Required | Default | Description |
 |---|---|---|---|
 | `GH_TOKEN` | **Yes** | — | GitHub token with `project` scope (org-level secret) |
-| `PROJECT_NUMBER` | No | `9` | The GitHub project number to add issues to |
-| `ORG` | No | `cloudoperators` | The GitHub organization owning the project |
-
-## How it works
-
-The action uses the GitHub GraphQL API to:
-
-1. Look up the project node ID from the org and project number
-2. Add the issue (by its node ID) to the project using `addProjectV2ItemById`
-
-This replaces the built-in GitHub Project "Auto-add" UI workflow with a code-based approach that can be version-controlled and applied consistently across repositories.
+| `PROJECT_URL` | No | `https://github.com/orgs/cloudoperators/projects/9` | Full URL of the GitHub project |

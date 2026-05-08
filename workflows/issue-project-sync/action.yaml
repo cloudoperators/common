@@ -5,51 +5,16 @@ inputs:
   GH_TOKEN:
     description: 'GitHub token with project write scope. Must be an org-level secret with project and repo permissions.'
     required: true
-  PROJECT_NUMBER:
-    description: 'The GitHub project number to add issues to'
+  PROJECT_URL:
+    description: 'The full URL of the GitHub project to add issues to'
     required: false
-    default: '9'
-  ORG:
-    description: 'The GitHub organization owning the project'
-    required: false
-    default: 'cloudoperators'
+    default: 'https://github.com/orgs/cloudoperators/projects/9'
 
 runs:
   using: "composite"
   steps:
     - name: Add issue to project
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.GH_TOKEN }}
-        ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
-        PROJECT_NUMBER: ${{ inputs.PROJECT_NUMBER }}
-        ORG: ${{ inputs.ORG }}
-      run: |
-        # Get the project node ID
-        PROJECT_ID=$(gh api graphql -f query='
-          query($org: String!, $number: Int!) {
-            organization(login: $org) {
-              projectV2(number: $number) {
-                id
-              }
-            }
-          }' -f org="$ORG" -F number="$PROJECT_NUMBER" --jq '.data.organization.projectV2.id')
-
-        if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "null" ]; then
-          echo "ERROR: Could not find project #${PROJECT_NUMBER} in org ${ORG}"
-          exit 1
-        fi
-
-        echo "Adding issue to project ${PROJECT_ID}..."
-
-        # Add the issue to the project
-        gh api graphql -f query='
-          mutation($project: ID!, $issue: ID!) {
-            addProjectV2ItemById(input: {projectId: $project, contentId: $issue}) {
-              item {
-                id
-              }
-            }
-          }' -f project="$PROJECT_ID" -f issue="$ISSUE_NODE_ID"
-
-        echo "✅ Issue added to project #${PROJECT_NUMBER} successfully."
+      uses: actions/add-to-project@v1.0.2
+      with:
+        project-url: ${{ inputs.PROJECT_URL }}
+        github-token: ${{ inputs.GH_TOKEN }}
