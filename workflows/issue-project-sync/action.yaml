@@ -1,0 +1,20 @@
+name: issue-project-sync
+description: Add issues labeled with 'backlog' to the cloudoperators project #9
+
+inputs:
+  GH_TOKEN:
+    description: 'GitHub token with project write scope. Must be an org-level secret with project and repo permissions.'
+    required: true
+  PROJECT_URL:
+    description: 'The full URL of the GitHub project to add issues to'
+    required: false
+    default: 'https://github.com/orgs/cloudoperators/projects/9'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Add issue to project
+      uses: actions/add-to-project@v1.0.2
+      with:
+        project-url: ${{ inputs.PROJECT_URL }}
+        github-token: ${{ inputs.GH_TOKEN }}
