@@ -119,6 +119,7 @@ jobs:
             repository: ${{ inputs.repository }}
             package: ${{ inputs.package }}
             expand-packages: ${{ inputs.expand-packages }}
+            delete-tags: ${{ inputs.delete-tags }}
             exclude-tags: ${{ inputs.exclude-tags }}
             delete-untagged: ${{ inputs.delete-untagged }}
             delete-ghost-images: ${{ inputs.delete-ghost-images }}
