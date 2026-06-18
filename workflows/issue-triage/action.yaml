@@ -23,16 +23,5 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.GH_TOKEN }}
         ISSUE_URL: ${{ github.event.issue.html_url }}
-        COMMENT_BODY: |
-          Thanks for opening this issue! 🎉
-
-          A maintainer will triage it within 5 business days. You can learn more about our issue workflow in the [Issue Lifecycle documentation](https://github.com/cloudoperators/common/blob/main/ISSUE_LIFECYCLE.md).
-
-          In the meantime, please make sure you have provided:
-          - A clear problem statement
-          - Steps to reproduce (for bugs)
-          - Expected vs actual behavior
-
-          This helps us route your issue faster.
       run: |
-        gh issue comment "$ISSUE_URL" --body "$COMMENT_BODY"
+        gh issue comment "$ISSUE_URL" --body "$(printf 'Thanks for opening this issue! 🎉\n\nA maintainer will triage it within 5 business days. See the [Issue Lifecycle documentation](https://github.com/cloudoperators/common/blob/main/ISSUE_LIFECYCLE.md) for details.\n\nIn the meantime, please make sure you have provided:\n- A clear problem statement\n- Steps to reproduce (for bugs)\n- Expected vs actual behavior')"
