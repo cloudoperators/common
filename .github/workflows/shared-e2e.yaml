@@ -47,11 +47,6 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout calling repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          path: caller
-
       - name: Run Greenhouse E2E composite action
         uses: cloudoperators/common/workflows/e2e@main
         with:
@@ -59,6 +54,11 @@ jobs:
           remote-k8s-version: ${{ inputs.remote-k8s-version }}
           scenario: ${{ inputs.scenario }}
           ref: ${{ inputs.greenhouse-ref }}
+
+      - name: Checkout calling repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          path: caller
 
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
