@@ -24,7 +24,7 @@ on:
         default: false
         type: boolean
       image-name:
-        description: "Full image name including registry, e.g. ghcr.io/cloudoperators/myapp"
+        description: "Full GHCR image name, e.g. ghcr.io/cloudoperators/myapp (must start with ghcr.io/ when push is true)"
         required: false
         default: ""
         type: string
@@ -70,6 +70,10 @@ jobs:
         run: |
           if [ -z "${{ inputs.image-name }}" ]; then
             echo "ERROR: image-name is required when docker-build is true"
+            exit 1
+          fi
+          if [ "${{ inputs.push }}" = "true" ] && [[ "${{ inputs.image-name }}" != ghcr.io/* ]]; then
+            echo "ERROR: image-name must start with 'ghcr.io/' when push is true (got: '${{ inputs.image-name }}')"
             exit 1
           fi
 
