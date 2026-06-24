@@ -56,17 +56,22 @@ jobs:
         with:
           go-version-file: ${{ format('{0}/go.mod', inputs.working-directory) }}
           cache: true
+          cache-dependency-path: ${{ format('{0}/go.sum', inputs.working-directory) }}
 
       - name: Download Go modules
         run: go mod download
 
       - name: Set extra environment variables
         if: inputs.extra-env != ''
+        env:
+          EXTRA_ENV: ${{ inputs.extra-env }}
         run: |
-          echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
+          printf '%s\n' "$EXTRA_ENV" >> "$GITHUB_ENV"
 
       - name: Run tests
-        run: make ${{ inputs.test-target }}
+        env:
+          TEST_TARGET: ${{ inputs.test-target }}
+        run: make "$TEST_TARGET"
 
       - name: Upload coverage report
         if: inputs.upload-coverage == true

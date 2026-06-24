@@ -61,9 +61,12 @@ jobs:
         with:
           go-version-file: ${{ format('{0}/go.mod', inputs.working-directory) }}
           cache: true
+          cache-dependency-path: ${{ format('{0}/go.sum', inputs.working-directory) }}
 
       - name: Build
-        run: make ${{ inputs.build-target }}
+        env:
+          BUILD_TARGET: ${{ inputs.build-target }}
+        run: make "$BUILD_TARGET"
 
       - name: Validate docker-build inputs
         if: inputs.docker-build == true
