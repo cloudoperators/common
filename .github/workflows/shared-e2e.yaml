@@ -25,11 +25,6 @@ on:
         description: "E2E scenario name passed to the composite action and make target"
         required: true
         type: string
-      with-remote-cluster:
-        description: "Spin up a second KinD cluster as the remote cluster"
-        required: false
-        default: false
-        type: boolean
       test-target:
         description: "The make target in the calling repo used to run e2e tests"
         required: false
@@ -45,26 +40,20 @@ on:
         required: false
         default: ""
         type: string
-    secrets:
-      kubeconfig:
-        description: "Kubeconfig for an external cluster (optional, used instead of spinning up KinD)"
-        required: false
-
 jobs:
   e2e:
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment != '' && inputs.environment || null }}
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Checkout calling repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          path: caller
 
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
-          go-version-file: ${{ inputs.working-directory != '.' && format('{0}/go.mod', inputs.working-directory) || 'go.mod' }}
+          go-version-file: caller/${{ inputs.working-directory != '.' && format('{0}/go.mod', inputs.working-directory) || 'go.mod' }}
           cache: true
 
       - name: Run Greenhouse E2E composite action
@@ -76,4 +65,5 @@ jobs:
           ref: ${{ inputs.greenhouse-ref }}
 
       - name: Run e2e tests
+        working-directory: caller/${{ inputs.working-directory }}
         run: make ${{ inputs.test-target }}

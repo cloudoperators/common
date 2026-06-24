@@ -51,6 +51,9 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      packages: ${{ inputs.push == true && 'write' || 'read' }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -67,6 +70,14 @@ jobs:
 
       - name: Build
         run: make ${{ inputs.build-target }}
+
+      - name: Validate docker-build inputs
+        if: inputs.docker-build == true
+        run: |
+          if [ -z "${{ inputs.image-name }}" ]; then
+            echo "ERROR: image-name is required when docker-build is true"
+            exit 1
+          fi
 
       - name: Set up QEMU
         if: inputs.docker-build == true
