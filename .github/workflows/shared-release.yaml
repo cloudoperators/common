@@ -135,12 +135,15 @@ jobs:
       - name: Create release branch and PR
         env:
           GH_TOKEN: ${{ secrets.release-token }}
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
+          CHART_PATH: ${{ inputs.chart-path }}
         run: |
           BRANCH="release-${{ steps.version.outputs.new }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git add ${{ inputs.makefile-path }} ${{ inputs.chart-path != '' && inputs.chart-path || '' }}
+          git add "$MAKEFILE_PATH"
+          if [ -n "$CHART_PATH" ]; then git add "$CHART_PATH"; fi
           git commit -m "chore: bump version to ${{ steps.version.outputs.new }}"
           git push origin "$BRANCH"
           DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
