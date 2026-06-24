@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       runs-on:
-        description: "The runner to use for the job"
+        description: "The runner to use for the job (must be a Linux runner; this workflow uses GNU sed)"
         required: false
         default: "ubuntu-latest"
         type: string
@@ -74,6 +74,10 @@ jobs:
 
       - name: Validate inputs
         run: |
+          if [ "$RUNNER_OS" != "Linux" ]; then
+            echo "ERROR: this workflow requires a Linux runner (uses GNU sed); got: $RUNNER_OS"
+            exit 1
+          fi
           if [ -z "${{ inputs.makefile-path }}" ]; then
             echo "ERROR: makefile-path is required for version computation"
             exit 1
@@ -176,6 +180,10 @@ jobs:
           fi
           if [ -z "${{ inputs.plugin-name }}" ]; then
             echo "ERROR: plugin-name input is required when dispatch-greenhouse-extensions is true"
+            exit 1
+          fi
+          if ! echo "${{ inputs.plugin-name }}" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+            echo "ERROR: plugin-name must contain only alphanumeric characters, hyphens, or underscores (got: '${{ inputs.plugin-name }}')"
             exit 1
           fi
 
