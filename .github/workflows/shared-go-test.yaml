@@ -1,0 +1,81 @@
+name: Shared Go Test
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job"
+        required: false
+        default: "ubuntu-latest"
+        type: string
+      go-version:
+        description: "Go version to use. If not set, version is read from go.mod"
+        required: false
+        default: ""
+        type: string
+      working-directory:
+        description: "Working directory for the job"
+        required: false
+        default: "."
+        type: string
+      test-target:
+        description: "The make target to run for tests"
+        required: false
+        default: "test"
+        type: string
+      upload-coverage:
+        description: "Upload coverage report as an artifact"
+        required: false
+        default: false
+        type: boolean
+      coverage-artifact-name:
+        description: "Name of the coverage artifact"
+        required: false
+        default: "code-coverage"
+        type: string
+      coverage-path:
+        description: "Path to the coverage output file"
+        required: false
+        default: "build/cover.out"
+        type: string
+      extra-env:
+        description: "Extra environment variables as newline-separated KEY=VALUE pairs"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  test:
+    runs-on: ${{ inputs.runs-on }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        with:
+          go-version: ${{ inputs.go-version != '' && inputs.go-version || null }}
+          go-version-file: ${{ inputs.go-version == '' && format('{0}/go.mod', inputs.working-directory) || null }}
+          cache: true
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Set extra environment variables
+        if: inputs.extra-env != ''
+        run: |
+          echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
+
+      - name: Run tests
+        run: make ${{ inputs.test-target }}
+
+      - name: Upload coverage report
+        if: inputs.upload-coverage == true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.coverage-artifact-name }}
+          path: ${{ inputs.working-directory != '.' && format('{0}/{1}', inputs.working-directory, inputs.coverage-path) || inputs.coverage-path }}
+          if-no-files-found: warn

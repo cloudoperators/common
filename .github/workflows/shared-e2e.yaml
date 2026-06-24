@@ -1,0 +1,79 @@
+name: Shared E2E
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job"
+        required: false
+        default: "ubuntu-latest"
+        type: string
+      greenhouse-ref:
+        description: "Ref (branch, tag, or SHA) of cloudoperators/greenhouse to deploy"
+        required: false
+        default: "main"
+        type: string
+      admin-k8s-version:
+        description: "Kubernetes node image tag for the admin KinD cluster (e.g. v1.31.0)"
+        required: true
+        type: string
+      remote-k8s-version:
+        description: "Kubernetes node image tag for the remote KinD cluster (e.g. v1.31.0)"
+        required: true
+        type: string
+      scenario:
+        description: "E2E scenario name passed to the composite action and make target"
+        required: true
+        type: string
+      with-remote-cluster:
+        description: "Spin up a second KinD cluster as the remote cluster"
+        required: false
+        default: false
+        type: boolean
+      test-target:
+        description: "The make target in the calling repo used to run e2e tests"
+        required: false
+        default: "e2e"
+        type: string
+      working-directory:
+        description: "Working directory for the make test target"
+        required: false
+        default: "."
+        type: string
+      environment:
+        description: "GitHub environment name to use for this job (optional)"
+        required: false
+        default: ""
+        type: string
+    secrets:
+      kubeconfig:
+        description: "Kubeconfig for an external cluster (optional, used instead of spinning up KinD)"
+        required: false
+
+jobs:
+  e2e:
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment != '' && inputs.environment || null }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout calling repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        with:
+          go-version-file: ${{ inputs.working-directory != '.' && format('{0}/go.mod', inputs.working-directory) || 'go.mod' }}
+          cache: true
+
+      - name: Run Greenhouse E2E composite action
+        uses: cloudoperators/common/workflows/e2e@main
+        with:
+          admin-k8s-version: ${{ inputs.admin-k8s-version }}
+          remote-k8s-version: ${{ inputs.remote-k8s-version }}
+          scenario: ${{ inputs.scenario }}
+          ref: ${{ inputs.greenhouse-ref }}
+
+      - name: Run e2e tests
+        run: make ${{ inputs.test-target }}
