@@ -1,4 +1,4 @@
-name: Shared Release Bump
+name: Shared Release
 
 on:
   workflow_call:
@@ -23,7 +23,7 @@ on:
         default: true
         type: boolean
       makefile-path:
-        description: "Relative path to the Makefile containing the VERSION variable"
+        description: "Relative path to the Makefile containing the VERSION variable. Leave empty to skip."
         required: false
         default: "Makefile"
         type: string
@@ -49,7 +49,7 @@ on:
         type: string
     secrets:
       release-token:
-        description: "PAT with contents:write and pull-requests:write permissions"
+        description: "PAT with contents:write permissions"
         required: true
       dispatch-app-id:
         description: "GitHub App ID used to generate a token for dispatching to greenhouse-extensions"
@@ -64,7 +64,6 @@ jobs:
     environment: ${{ inputs.environment != '' && inputs.environment || null }}
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -132,26 +131,19 @@ jobs:
         run: |
           sed -i "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.new }}\"/" "${{ inputs.chart-path }}"
 
-      - name: Create release branch and PR
+      - name: Commit version bump and tag
         env:
           GH_TOKEN: ${{ secrets.release-token }}
           MAKEFILE_PATH: ${{ inputs.makefile-path }}
           CHART_PATH: ${{ inputs.chart-path }}
         run: |
-          BRANCH="release-${{ steps.version.outputs.new }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git add "$MAKEFILE_PATH"
+          if [ -n "$MAKEFILE_PATH" ]; then git add "$MAKEFILE_PATH"; fi
           if [ -n "$CHART_PATH" ]; then git add "$CHART_PATH"; fi
           git commit -m "chore: bump version to ${{ steps.version.outputs.new }}"
-          git push origin "$BRANCH"
-          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
-          gh pr create \
-            --title "chore: release v${{ steps.version.outputs.new }}" \
-            --body "Automated version bump from \`${{ steps.version.outputs.current }}\` to \`${{ steps.version.outputs.new }}\`." \
-            --base "$DEFAULT_BRANCH" \
-            --head "$BRANCH"
+          git tag "v${{ steps.version.outputs.new }}"
+          git push origin "${{ github.event.repository.default_branch }}" --follow-tags
 
       - name: Create GitHub release
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
@@ -165,8 +157,7 @@ jobs:
               name: 'v${{ steps.version.outputs.new }}',
               generate_release_notes: true,
               draft: false,
-              prerelease: false,
-              target_commitish: context.payload.repository.default_branch
+              prerelease: false
             });
 
       - name: Validate dispatch inputs
