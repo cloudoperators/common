@@ -118,7 +118,7 @@ jobs:
           sed -i -E "s/^VERSION[[:space:]]*[:?]?=.*/VERSION = ${{ steps.version.outputs.new }}/" "${{ inputs.makefile-path }}"
 
       - name: Update Makefile IMG tag
-        if: inputs.bump-make-version == true
+        if: inputs.bump-make-version == true && inputs.makefile-path != ''
         run: |
           sed -i -E "s|(IMG[[:space:]]*[:?]?=.*:).*|\1${{ steps.version.outputs.new }}|" "${{ inputs.makefile-path }}"
 
@@ -168,6 +168,18 @@ jobs:
               prerelease: false,
               target_commitish: context.payload.repository.default_branch
             });
+
+      - name: Validate dispatch inputs
+        if: inputs.dispatch-greenhouse-extensions == true
+        run: |
+          if [ -z "${{ secrets.dispatch-app-id }}" ] || [ -z "${{ secrets.dispatch-app-private-key }}" ]; then
+            echo "ERROR: dispatch-app-id and dispatch-app-private-key secrets are required when dispatch-greenhouse-extensions is true"
+            exit 1
+          fi
+          if [ -z "${{ inputs.plugin-name }}" ]; then
+            echo "ERROR: plugin-name input is required when dispatch-greenhouse-extensions is true"
+            exit 1
+          fi
 
       - name: Generate GitHub App token for dispatch
         if: inputs.dispatch-greenhouse-extensions == true
