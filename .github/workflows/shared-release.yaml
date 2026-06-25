@@ -82,6 +82,10 @@ jobs:
             echo "ERROR: makefile-path is required for version computation"
             exit 1
           fi
+          if [ ! -f "${{ inputs.makefile-path }}" ]; then
+            echo "ERROR: makefile-path '${{ inputs.makefile-path }}' does not exist"
+            exit 1
+          fi
 
       - name: Compute new version
         id: version
