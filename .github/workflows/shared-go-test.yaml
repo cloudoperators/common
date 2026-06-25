@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       runs-on:
-        description: "The runner to use for the job"
+        description: "The runner to use for the job (must be a Linux or macOS runner; this workflow requires make)"
         required: false
         default: "ubuntu-latest"
         type: string
@@ -48,6 +48,13 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
+      - name: Validate runner
+        run: |
+          case "$RUNNER_OS" in
+            Linux|macOS) ;;
+            *) echo "ERROR: this workflow requires a Linux or macOS runner (needs make); got: $RUNNER_OS"; exit 1 ;;
+          esac
+
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 

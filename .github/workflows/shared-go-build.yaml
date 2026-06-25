@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       runs-on:
-        description: "The runner to use for the job"
+        description: "The runner to use for the job (must be a Linux or macOS runner; this workflow requires make)"
         required: false
         default: "ubuntu-latest"
         type: string
@@ -61,6 +61,10 @@ jobs:
           PUSH: ${{ inputs.push }}
           DOCKER_BUILD: ${{ inputs.docker-build }}
         run: |
+          case "$RUNNER_OS" in
+            Linux|macOS) ;;
+            *) echo "ERROR: this workflow requires a Linux or macOS runner (needs make); got: $RUNNER_OS"; exit 1 ;;
+          esac
           if [ "$PUSH" = "true" ] && [ "$DOCKER_BUILD" != "true" ]; then
             echo "ERROR: push=true requires docker-build=true"
             exit 1
