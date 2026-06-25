@@ -173,7 +173,6 @@ jobs:
 
       - name: Commit version bump and tag
         env:
-          GH_TOKEN: ${{ secrets.release-token }}
           MAKEFILE_PATH: ${{ inputs.makefile-path }}
           CHART_PATH: ${{ inputs.chart-path }}
           NEW_VERSION: ${{ steps.version.outputs.new }}
