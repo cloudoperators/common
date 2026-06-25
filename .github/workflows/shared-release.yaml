@@ -86,7 +86,7 @@ jobs:
       - name: Compute new version
         id: version
         run: |
-          CURRENT_VERSION=$(grep -E '^VERSION[[:space:]]*[:?]?=' "${{ inputs.makefile-path }}" | head -1 | sed 's/.*=[[:space:]]*//' | tr -d '[:space:]')
+          CURRENT_VERSION=$(grep -E '^VERSION[[:space:]]*[:?]?=' "${{ inputs.makefile-path }}" | head -1 | sed 's/.*=[[:space:]]*//' | tr -d '[:space:]' || true)
           echo "Current version: $CURRENT_VERSION"
 
           if ! echo "$CURRENT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
