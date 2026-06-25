@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       runs-on:
-        description: "The runner to use for the job"
+        description: "The runner to use for the job (must be a Linux runner; this workflow uses KinD and make)"
         required: false
         default: "ubuntu-latest"
         type: string
@@ -47,6 +47,13 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Validate runner
+        run: |
+          if [ "$RUNNER_OS" != "Linux" ]; then
+            echo "ERROR: this workflow requires a Linux runner (uses KinD and make); got: $RUNNER_OS"
+            exit 1
+          fi
+
       - name: Run Greenhouse E2E composite action
         uses: cloudoperators/common/workflows/e2e@main
         with:

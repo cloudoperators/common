@@ -153,7 +153,7 @@ jobs:
           NEW_VERSION: ${{ steps.version.outputs.new }}
           MAKEFILE_PATH: ${{ inputs.makefile-path }}
         run: |
-          sed -i -E "s|(IMG[[:space:]]*[:?]?=.*:).*|\1${NEW_VERSION}|" "$MAKEFILE_PATH"
+          sed -i -E "s|^(IMG[[:space:]]*[:?]?=.*:).*|\1${NEW_VERSION}|" "$MAKEFILE_PATH"
 
       - name: Update Chart.yaml version
         if: inputs.chart-path != ''
