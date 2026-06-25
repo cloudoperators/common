@@ -66,6 +66,13 @@ jobs:
         env:
           EXTRA_ENV: ${{ inputs.extra-env }}
         run: |
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            if ! echo "$line" | grep -qE '^[A-Za-z_][A-Za-z0-9_]*='; then
+              echo "ERROR: invalid extra-env line (must be KEY=VALUE with a valid identifier key): '$line'"
+              exit 1
+            fi
+          done <<< "$EXTRA_ENV"
           printf '%s\n' "$EXTRA_ENV" >> "$GITHUB_ENV"
 
       - name: Run tests

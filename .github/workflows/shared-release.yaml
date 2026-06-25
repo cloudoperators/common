@@ -76,32 +76,38 @@ jobs:
           fetch-depth: 0
 
       - name: Validate inputs
+        env:
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
+          CHART_PATH: ${{ inputs.chart-path }}
         run: |
           if [ "$RUNNER_OS" != "Linux" ]; then
             echo "ERROR: this workflow requires a Linux runner (uses GNU sed); got: $RUNNER_OS"
             exit 1
           fi
-          if [ -z "${{ inputs.makefile-path }}" ]; then
+          if [ -z "$MAKEFILE_PATH" ]; then
             echo "ERROR: makefile-path is required for version computation"
             exit 1
           fi
-          if [ ! -f "${{ inputs.makefile-path }}" ]; then
-            echo "ERROR: makefile-path '${{ inputs.makefile-path }}' does not exist"
+          if [ ! -f "$MAKEFILE_PATH" ]; then
+            echo "ERROR: makefile-path '$MAKEFILE_PATH' does not exist"
             exit 1
           fi
-          if [ -n "${{ inputs.chart-path }}" ] && [ ! -f "${{ inputs.chart-path }}" ]; then
-            echo "ERROR: chart-path '${{ inputs.chart-path }}' does not exist"
+          if [ -n "$CHART_PATH" ] && [ ! -f "$CHART_PATH" ]; then
+            echo "ERROR: chart-path '$CHART_PATH' does not exist"
             exit 1
           fi
 
       - name: Compute new version
         id: version
+        env:
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
+          BUMP: ${{ inputs.bump }}
         run: |
-          CURRENT_VERSION=$(grep -E '^VERSION[[:space:]]*[:?]?=' "${{ inputs.makefile-path }}" | head -1 | sed 's/.*=[[:space:]]*//' | tr -d '[:space:]' || true)
+          CURRENT_VERSION=$(grep -E '^VERSION[[:space:]]*[:?]?=' "$MAKEFILE_PATH" | head -1 | sed 's/.*=[[:space:]]*//' | tr -d '[:space:]' || true)
           echo "Current version: $CURRENT_VERSION"
 
           if ! echo "$CURRENT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "ERROR: could not parse VERSION from ${{ inputs.makefile-path }} (got: '$CURRENT_VERSION')"
+            echo "ERROR: could not parse VERSION from $MAKEFILE_PATH (got: '$CURRENT_VERSION')"
             exit 1
           fi
 
@@ -109,7 +115,7 @@ jobs:
           MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
           PATCH=$(echo "$CURRENT_VERSION" | cut -d. -f3)
 
-          case "${{ inputs.bump }}" in
+          case "$BUMP" in
             major)
               MAJOR=$((MAJOR + 1))
               MINOR=0
@@ -123,7 +129,7 @@ jobs:
               PATCH=$((PATCH + 1))
               ;;
             *)
-              echo "Invalid bump type: ${{ inputs.bump }}"
+              echo "Invalid bump type: $BUMP"
               exit 1
               ;;
           esac
@@ -135,37 +141,51 @@ jobs:
 
       - name: Update Makefile VERSION
         if: inputs.makefile-path != ''
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
         run: |
-          sed -i -E "s/^VERSION[[:space:]]*[:?]?=.*/VERSION = ${{ steps.version.outputs.new }}/" "${{ inputs.makefile-path }}"
+          sed -i -E "s/^VERSION[[:space:]]*[:?]?=.*/VERSION = ${NEW_VERSION}/" "$MAKEFILE_PATH"
 
       - name: Update Makefile IMG tag
         if: inputs.bump-make-version == true && inputs.makefile-path != ''
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
         run: |
-          sed -i -E "s|(IMG[[:space:]]*[:?]?=.*:).*|\1${{ steps.version.outputs.new }}|" "${{ inputs.makefile-path }}"
+          sed -i -E "s|(IMG[[:space:]]*[:?]?=.*:).*|\1${NEW_VERSION}|" "$MAKEFILE_PATH"
 
       - name: Update Chart.yaml version
         if: inputs.chart-path != ''
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          CHART_PATH: ${{ inputs.chart-path }}
         run: |
-          sed -i "s/^version:.*/version: ${{ steps.version.outputs.new }}/" "${{ inputs.chart-path }}"
+          sed -i "s/^version:.*/version: ${NEW_VERSION}/" "$CHART_PATH"
 
       - name: Update Chart.yaml appVersion
         if: inputs.chart-path != '' && inputs.bump-chart-app-version == true
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          CHART_PATH: ${{ inputs.chart-path }}
         run: |
-          sed -i "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.new }}\"/" "${{ inputs.chart-path }}"
+          sed -i "s/^appVersion:.*/appVersion: \"${NEW_VERSION}\"/" "$CHART_PATH"
 
       - name: Commit version bump and tag
         env:
           GH_TOKEN: ${{ secrets.release-token }}
           MAKEFILE_PATH: ${{ inputs.makefile-path }}
           CHART_PATH: ${{ inputs.chart-path }}
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [ -n "$MAKEFILE_PATH" ]; then git add "$MAKEFILE_PATH"; fi
           if [ -n "$CHART_PATH" ]; then git add "$CHART_PATH"; fi
-          git commit -m "chore: bump version to ${{ steps.version.outputs.new }}"
-          git tag -a "v${{ steps.version.outputs.new }}" -m "Release v${{ steps.version.outputs.new }}"
-          git push origin "${{ github.event.repository.default_branch }}" --follow-tags
+          git commit -m "chore: bump version to ${NEW_VERSION}"
+          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
+          git push origin "$DEFAULT_BRANCH" --follow-tags
 
       - name: Create GitHub release
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
@@ -184,17 +204,21 @@ jobs:
 
       - name: Validate dispatch inputs
         if: inputs.dispatch-greenhouse-extensions == true
+        env:
+          PLUGIN_NAME: ${{ inputs.plugin-name }}
+          DISPATCH_APP_ID: ${{ secrets.dispatch-app-id }}
+          DISPATCH_APP_KEY: ${{ secrets.dispatch-app-private-key }}
         run: |
-          if [ -z "${{ secrets.dispatch-app-id }}" ] || [ -z "${{ secrets.dispatch-app-private-key }}" ]; then
+          if [ -z "$DISPATCH_APP_ID" ] || [ -z "$DISPATCH_APP_KEY" ]; then
             echo "ERROR: dispatch-app-id and dispatch-app-private-key secrets are required when dispatch-greenhouse-extensions is true"
             exit 1
           fi
-          if [ -z "${{ inputs.plugin-name }}" ]; then
+          if [ -z "$PLUGIN_NAME" ]; then
             echo "ERROR: plugin-name input is required when dispatch-greenhouse-extensions is true"
             exit 1
           fi
-          if ! echo "${{ inputs.plugin-name }}" | grep -qE '^[a-zA-Z0-9_-]+$'; then
-            echo "ERROR: plugin-name must contain only alphanumeric characters, hyphens, or underscores (got: '${{ inputs.plugin-name }}')"
+          if ! echo "$PLUGIN_NAME" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+            echo "ERROR: plugin-name must contain only alphanumeric characters, hyphens, or underscores (got: '$PLUGIN_NAME')"
             exit 1
           fi
 

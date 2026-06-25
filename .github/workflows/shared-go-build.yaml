@@ -57,8 +57,11 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Validate inputs
+        env:
+          PUSH: ${{ inputs.push }}
+          DOCKER_BUILD: ${{ inputs.docker-build }}
         run: |
-          if [ "${{ inputs.push }}" = "true" ] && [ "${{ inputs.docker-build }}" != "true" ]; then
+          if [ "$PUSH" = "true" ] && [ "$DOCKER_BUILD" != "true" ]; then
             echo "ERROR: push=true requires docker-build=true"
             exit 1
           fi
@@ -77,20 +80,23 @@ jobs:
 
       - name: Validate docker-build inputs
         if: inputs.docker-build == true
+        env:
+          IMAGE_NAME: ${{ inputs.image-name }}
+          PUSH: ${{ inputs.push }}
         run: |
           if [ "$RUNNER_OS" != "Linux" ]; then
             echo "ERROR: docker-build requires a Linux runner; got: $RUNNER_OS"
             exit 1
           fi
-          if [ -z "${{ inputs.image-name }}" ]; then
+          if [ -z "$IMAGE_NAME" ]; then
             echo "ERROR: image-name is required when docker-build is true"
             exit 1
           fi
-          case "${{ inputs.image-name }}" in
+          case "$IMAGE_NAME" in
             ghcr.io/*) ;;
             *)
-              if [ "${{ inputs.push }}" = "true" ]; then
-                echo "ERROR: image-name must start with 'ghcr.io/' when push is true (got: '${{ inputs.image-name }}')"
+              if [ "$PUSH" = "true" ]; then
+                echo "ERROR: image-name must start with 'ghcr.io/' when push is true (got: '$IMAGE_NAME')"
                 exit 1
               fi
               ;;
