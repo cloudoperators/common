@@ -65,6 +65,7 @@ jobs:
         with:
           go-version-file: caller/${{ inputs.working-directory != '.' && format('{0}/go.mod', inputs.working-directory) || 'go.mod' }}
           cache: true
+          cache-dependency-path: caller/${{ inputs.working-directory != '.' && format('{0}/go.sum', inputs.working-directory) || 'go.sum' }}
 
       - name: Run e2e tests
         working-directory: caller/${{ inputs.working-directory }}
