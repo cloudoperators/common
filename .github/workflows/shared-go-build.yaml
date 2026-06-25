@@ -71,14 +71,23 @@ jobs:
       - name: Validate docker-build inputs
         if: inputs.docker-build == true
         run: |
+          if [ "$RUNNER_OS" != "Linux" ]; then
+            echo "ERROR: docker-build requires a Linux runner; got: $RUNNER_OS"
+            exit 1
+          fi
           if [ -z "${{ inputs.image-name }}" ]; then
             echo "ERROR: image-name is required when docker-build is true"
             exit 1
           fi
-          if [ "${{ inputs.push }}" = "true" ] && [[ "${{ inputs.image-name }}" != ghcr.io/* ]]; then
-            echo "ERROR: image-name must start with 'ghcr.io/' when push is true (got: '${{ inputs.image-name }}')"
-            exit 1
-          fi
+          case "${{ inputs.image-name }}" in
+            ghcr.io/*) ;;
+            *)
+              if [ "${{ inputs.push }}" = "true" ]; then
+                echo "ERROR: image-name must start with 'ghcr.io/' when push is true (got: '${{ inputs.image-name }}')"
+                exit 1
+              fi
+              ;;
+          esac
 
       - name: Set up QEMU
         if: inputs.docker-build == true
