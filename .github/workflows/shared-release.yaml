@@ -23,12 +23,12 @@ on:
         default: true
         type: boolean
       makefile-path:
-        description: "Relative path to the Makefile containing the VERSION variable (required for version computation)."
+        description: "Relative path to the Makefile containing the VERSION variable. Defaults to 'Makefile' in the repository root."
         required: false
         default: "Makefile"
         type: string
       bump-make-version:
-        description: "Update the IMG tag in the Makefile to the new version"
+        description: "Also update the IMG tag in the Makefile to the new version (the VERSION variable is always updated; this controls whether the IMG tag line is also rewritten)"
         required: false
         default: false
         type: boolean
