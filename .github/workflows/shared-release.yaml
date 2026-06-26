@@ -23,9 +23,9 @@ on:
         default: true
         type: boolean
       makefile-path:
-        description: "Relative path to the Makefile containing the VERSION variable. Defaults to 'Makefile'. Leave empty ('') to skip Makefile version parsing and fall back to chart-path version."
+        description: "Relative path to the Makefile containing the VERSION variable (e.g. Makefile). Leave empty ('') to skip Makefile version parsing and fall back to chart-path version."
         required: false
-        default: "Makefile"
+        default: ""
         type: string
       bump-make-version:
         description: "Also update the IMG tag in the Makefile to the new version (the VERSION variable is always updated; this controls whether the IMG tag line is also rewritten)"
