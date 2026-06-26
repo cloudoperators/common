@@ -54,7 +54,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Validate inputs
         env:
@@ -71,7 +71,7 @@ jobs:
           fi
 
       - name: Set up Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: ${{ format('{0}/go.mod', inputs.working-directory) }}
           cache: true
@@ -108,15 +108,15 @@ jobs:
 
       - name: Set up QEMU
         if: inputs.docker-build == true
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff9c25c0e60b9eba63c # v3
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
 
       - name: Set up Docker Buildx
         if: inputs.docker-build == true
-        uses: docker/setup-buildx-action@b5730b4fe97e6f9f14b9d7bb5f0f0b9f75a3b6ca # v3
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Log in to container registry
         if: inputs.docker-build == true && inputs.push == true
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -125,13 +125,13 @@ jobs:
       - name: Extract Docker metadata
         if: inputs.docker-build == true
         id: meta
-        uses: docker/metadata-action@902fa8ec7d6ecbea8a63d9c1064e4b9e02685b72 # v5
+        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6
         with:
           images: ${{ inputs.image-name }}
 
       - name: Build and push Docker image
         if: inputs.docker-build == true
-        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: ${{ inputs.working-directory }}
           platforms: ${{ inputs.platforms }}
