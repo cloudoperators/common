@@ -1,0 +1,81 @@
+name: Shared E2E
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job (must be a Linux runner; this workflow uses KinD and make)"
+        required: false
+        default: "ubuntu-latest"
+        type: string
+      greenhouse-ref:
+        description: "Ref (branch, tag, or SHA) of cloudoperators/greenhouse to deploy"
+        required: false
+        default: "main"
+        type: string
+      admin-k8s-version:
+        description: "Kubernetes node image tag for the admin KinD cluster (e.g. v1.31.0)"
+        required: true
+        type: string
+      remote-k8s-version:
+        description: "Kubernetes node image tag for the remote KinD cluster (e.g. v1.31.0)"
+        required: true
+        type: string
+      scenario:
+        description: "E2E scenario name passed to the composite action and make target"
+        required: true
+        type: string
+      test-target:
+        description: "The make target in the calling repo used to run e2e tests"
+        required: false
+        default: "e2e"
+        type: string
+      working-directory:
+        description: "Working directory for the make test target"
+        required: false
+        default: "."
+        type: string
+      environment:
+        description: "GitHub environment name to use for this job (optional)"
+        required: false
+        default: ""
+        type: string
+jobs:
+  e2e:
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment != '' && inputs.environment || null }}
+    permissions:
+      contents: read
+    steps:
+      - name: Validate runner
+        run: |
+          if [ "$RUNNER_OS" != "Linux" ]; then
+            echo "ERROR: this workflow requires a Linux runner (uses KinD and make); got: $RUNNER_OS"
+            exit 1
+          fi
+
+      - name: Run Greenhouse E2E composite action
+        uses: cloudoperators/common/workflows/e2e@main
+        with:
+          admin-k8s-version: ${{ inputs.admin-k8s-version }}
+          remote-k8s-version: ${{ inputs.remote-k8s-version }}
+          scenario: ${{ inputs.scenario }}
+          ref: ${{ inputs.greenhouse-ref }}
+
+      - name: Checkout calling repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          path: caller
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        with:
+          go-version-file: caller/${{ inputs.working-directory != '.' && format('{0}/go.mod', inputs.working-directory) || 'go.mod' }}
+          cache: true
+          cache-dependency-path: caller/${{ inputs.working-directory != '.' && format('{0}/go.sum', inputs.working-directory) || 'go.sum' }}
+
+      - name: Run e2e tests
+        working-directory: caller/${{ inputs.working-directory }}
+        env:
+          TEST_TARGET: ${{ inputs.test-target }}
+        run: make "$TEST_TARGET"

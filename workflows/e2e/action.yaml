@@ -104,8 +104,8 @@ runs:
         GREENHOUSE_ADMIN_KUBECONFIG: ${{ steps.config.outputs.admin_config }}
         GREENHOUSE_REMOTE_KUBECONFIG: ${{ steps.config.outputs.remote_config }}
         GREENHOUSE_REMOTE_INT_KUBECONFIG: ${{ steps.config.outputs.remote_int_config }}
-        CONTROLLER_LOGS_PATH: ${{github.workspace}}/bin/${{inputs.scenario}}-${{inputs.k8s-version}}.txt
-        E2E_REPORT_PATH: ${{github.workspace}}/bin/${{inputs.scenario}}-${{matrix.k8s-version}}.json
+        CONTROLLER_LOGS_PATH: ${{github.workspace}}/bin/${{inputs.scenario}}-${{inputs.remote-k8s-version}}.txt
+        E2E_REPORT_PATH: ${{github.workspace}}/bin/${{inputs.scenario}}-${{inputs.remote-k8s-version}}.json
       run: |
-        echo "result=$CONTROLLER_LOGS_PATH" >> $GITHUB_OUTPUT
+        echo "result=$E2E_REPORT_PATH" >> $GITHUB_OUTPUT
         make e2e

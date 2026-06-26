@@ -1,0 +1,251 @@
+name: Shared Release
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job (must be a Linux runner; this workflow uses GNU sed)"
+        required: false
+        default: "ubuntu-latest"
+        type: string
+      bump:
+        description: "Version bump type: patch, minor, or major"
+        required: true
+        type: string
+      chart-path:
+        description: "Relative path to Chart.yaml to update (e.g. charts/my-app/Chart.yaml). Leave empty to skip."
+        required: false
+        default: ""
+        type: string
+      bump-chart-app-version:
+        description: "Update the appVersion field in Chart.yaml to the new version"
+        required: false
+        default: true
+        type: boolean
+      makefile-path:
+        description: "Relative path to the Makefile containing the VERSION variable (e.g. Makefile). Leave empty ('') to skip Makefile version parsing and fall back to chart-path version."
+        required: false
+        default: ""
+        type: string
+      bump-make-version:
+        description: "Also update the IMG tag in the Makefile to the new version (the VERSION variable is always updated; this controls whether the IMG tag line is also rewritten)"
+        required: false
+        default: false
+        type: boolean
+      dispatch-greenhouse-extensions:
+        description: "Trigger a repository_dispatch event on cloudoperators/greenhouse-extensions after release"
+        required: false
+        default: false
+        type: boolean
+      plugin-name:
+        description: "Plugin name passed as payload when dispatching to greenhouse-extensions"
+        required: false
+        default: ""
+        type: string
+      environment:
+        description: "GitHub environment name to use for this job (e.g. release), for environment protection rules and scoped secrets"
+        required: false
+        default: ""
+        type: string
+    secrets:
+      release-token:
+        description: "PAT with contents:write permissions"
+        required: true
+      dispatch-app-id:
+        description: "GitHub App ID used to generate a token for dispatching to greenhouse-extensions"
+        required: false
+      dispatch-app-private-key:
+        description: "GitHub App private key used to generate a token for dispatching to greenhouse-extensions"
+        required: false
+
+jobs:
+  release:
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment != '' && inputs.environment || null }}
+    concurrency:
+      group: release-${{ github.repository }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          token: ${{ secrets.release-token }}
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Validate inputs
+        env:
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
+          CHART_PATH: ${{ inputs.chart-path }}
+        run: |
+          if [ "$RUNNER_OS" != "Linux" ]; then
+            echo "ERROR: this workflow requires a Linux runner (uses GNU sed); got: $RUNNER_OS"
+            exit 1
+          fi
+          if [ -z "$MAKEFILE_PATH" ] && [ -z "$CHART_PATH" ]; then
+            echo "ERROR: at least one of makefile-path or chart-path is required for version computation"
+            exit 1
+          fi
+          if [ -n "$MAKEFILE_PATH" ] && [ ! -f "$MAKEFILE_PATH" ]; then
+            echo "ERROR: makefile-path '$MAKEFILE_PATH' does not exist"
+            exit 1
+          fi
+          if [ -n "$CHART_PATH" ] && [ ! -f "$CHART_PATH" ]; then
+            echo "ERROR: chart-path '$CHART_PATH' does not exist"
+            exit 1
+          fi
+
+      - name: Compute new version
+        id: version
+        env:
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
+          CHART_PATH: ${{ inputs.chart-path }}
+          BUMP: ${{ inputs.bump }}
+        run: |
+          CURRENT_VERSION=""
+          if [ -n "$MAKEFILE_PATH" ]; then
+            CURRENT_VERSION=$(grep -E '^VERSION[[:space:]]*[:?]?=' "$MAKEFILE_PATH" | head -1 | sed 's/.*=[[:space:]]*//' | sed 's/[[:space:]]*#.*//' | tr -d '[:space:]' || true)
+          fi
+          if ! echo "$CURRENT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            if [ -n "$CHART_PATH" ]; then
+              CURRENT_VERSION=$(grep -E '^version:[[:space:]]*' "$CHART_PATH" | head -1 | sed 's/^version:[[:space:]]*//' | tr -d '[:space:]"' || true)
+              echo "Falling back to Chart.yaml version: $CURRENT_VERSION"
+            fi
+          fi
+          echo "Current version: $CURRENT_VERSION"
+
+          if ! echo "$CURRENT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: could not parse version from makefile-path or chart-path (got: '$CURRENT_VERSION')"
+            exit 1
+          fi
+
+          MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
+          PATCH=$(echo "$CURRENT_VERSION" | cut -d. -f3)
+
+          case "$BUMP" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+            *)
+              echo "ERROR: Invalid bump type: $BUMP"
+              exit 1
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "current=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "new=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Update Makefile VERSION
+        if: inputs.makefile-path != ''
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
+        run: |
+          sed -i -E "s/^(VERSION[[:space:]]*[:?]?=)[[:space:]]*.*/\1 ${NEW_VERSION}/" "$MAKEFILE_PATH"
+
+      - name: Update Makefile IMG tag
+        if: inputs.bump-make-version == true && inputs.makefile-path != ''
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
+        run: |
+          sed -i -E "s|^(IMG[[:space:]]*[:?]?=.*:).*|\1${NEW_VERSION}|" "$MAKEFILE_PATH"
+
+      - name: Update Chart.yaml version
+        if: inputs.chart-path != ''
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          CHART_PATH: ${{ inputs.chart-path }}
+        run: |
+          sed -i "s/^version:.*/version: ${NEW_VERSION}/" "$CHART_PATH"
+
+      - name: Update Chart.yaml appVersion
+        if: inputs.chart-path != '' && inputs.bump-chart-app-version == true
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          CHART_PATH: ${{ inputs.chart-path }}
+        run: |
+          sed -i "s/^appVersion:.*/appVersion: \"${NEW_VERSION}\"/" "$CHART_PATH"
+
+      - name: Commit version bump and tag
+        env:
+          MAKEFILE_PATH: ${{ inputs.makefile-path }}
+          CHART_PATH: ${{ inputs.chart-path }}
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$MAKEFILE_PATH" ]; then git add "$MAKEFILE_PATH"; fi
+          if [ -n "$CHART_PATH" ]; then git add "$CHART_PATH"; fi
+          git commit -m "chore: bump version to ${NEW_VERSION}"
+          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
+          git push origin "$DEFAULT_BRANCH" --follow-tags
+
+      - name: Create GitHub release
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          github-token: ${{ secrets.release-token }}
+          script: |
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: 'v${{ steps.version.outputs.new }}',
+              name: 'v${{ steps.version.outputs.new }}',
+              generate_release_notes: true,
+              draft: false,
+              prerelease: false
+            });
+
+      - name: Validate dispatch inputs
+        if: inputs.dispatch-greenhouse-extensions == true
+        env:
+          PLUGIN_NAME: ${{ inputs.plugin-name }}
+          DISPATCH_APP_ID: ${{ secrets.dispatch-app-id }}
+          DISPATCH_APP_KEY: ${{ secrets.dispatch-app-private-key }}
+        run: |
+          if [ -z "$DISPATCH_APP_ID" ] || [ -z "$DISPATCH_APP_KEY" ]; then
+            echo "ERROR: dispatch-app-id and dispatch-app-private-key secrets are required when dispatch-greenhouse-extensions is true"
+            exit 1
+          fi
+          if [ -z "$PLUGIN_NAME" ]; then
+            echo "ERROR: plugin-name input is required when dispatch-greenhouse-extensions is true"
+            exit 1
+          fi
+          if ! echo "$PLUGIN_NAME" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+            echo "ERROR: plugin-name must contain only alphanumeric characters, hyphens, or underscores (got: '$PLUGIN_NAME')"
+            exit 1
+          fi
+
+      - name: Generate GitHub App token for dispatch
+        if: inputs.dispatch-greenhouse-extensions == true
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ secrets.dispatch-app-id }}
+          private-key: ${{ secrets.dispatch-app-private-key }}
+          repositories: greenhouse-extensions
+          permission-contents: write
+
+      - name: Dispatch to greenhouse-extensions
+        if: inputs.dispatch-greenhouse-extensions == true
+        uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          repository: cloudoperators/greenhouse-extensions
+          event-type: deployment-params
+          client-payload: '{"plugin":"${{ inputs.plugin-name }}","version":"${{ steps.version.outputs.new }}"}'
