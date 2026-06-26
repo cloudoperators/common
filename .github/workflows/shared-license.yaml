@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -61,7 +61,7 @@ jobs:
         permission-contents: write
 
     - name: Checkout
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       with:
         token: ${{ steps.github-app-token.outputs.token != '' && steps.github-app-token.outputs.token || secrets.GITHUB_TOKEN }}
         repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -74,7 +74,7 @@ jobs:
           mode: fix
 
     - name: Apply Changes
-      uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9
+      uses: EndBug/add-and-commit@290ea2c423ad77ca9c62ae0f5b224379612c0321 # v10
       with:
           author_name: License Bot
           author_email: license_bot@github.com
