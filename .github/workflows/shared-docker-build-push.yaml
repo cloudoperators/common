@@ -1,0 +1,82 @@
+name: Shared Docker Build Push
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The runner to use for the job (must be a Linux runner; this workflow requires Docker buildx)"
+        required: false
+        default: "ubuntu-latest"
+        type: string
+      working-directory:
+        description: "Working directory used as Docker build context"
+        required: false
+        default: "."
+        type: string
+      image-name:
+        description: "Full GHCR image name, e.g. ghcr.io/cloudoperators/myapp"
+        required: true
+        type: string
+      platforms:
+        description: "Comma-separated list of target platforms for the Docker image"
+        required: false
+        default: "linux/amd64,linux/arm64"
+        type: string
+    secrets:
+      registry-token:
+        description: "Token used to authenticate to the container registry when pushing"
+        required: false
+
+jobs:
+  push:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Validate inputs
+        env:
+          IMAGE_NAME: ${{ inputs.image-name }}
+        run: |
+          if [ "$RUNNER_OS" != "Linux" ]; then
+            echo "ERROR: docker push requires a Linux runner; got: $RUNNER_OS"
+            exit 1
+          fi
+          case "$IMAGE_NAME" in
+            ghcr.io/*) ;;
+            *) echo "ERROR: image-name must start with 'ghcr.io/' (got: '$IMAGE_NAME')"; exit 1 ;;
+          esac
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff9c25c0e60b9eba63c # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5730b4fe97e6f9f14b9d7bb5f0f0b9f75a3b6ca # v3
+
+      - name: Log in to container registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.registry-token != '' && secrets.registry-token || secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbea8a63d9c1064e4b9e02685b72 # v5
+        with:
+          images: ${{ inputs.image-name }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6
+        with:
+          context: ${{ inputs.working-directory }}
+          platforms: ${{ inputs.platforms }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
