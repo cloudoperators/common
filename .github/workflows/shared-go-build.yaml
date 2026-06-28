@@ -48,14 +48,10 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     permissions:
       contents: read
-      packages: ${{ inputs.push == true && 'write' || 'read' }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
       - name: Validate inputs
         env:
           PUSH: ${{ inputs.push }}
@@ -70,7 +66,11 @@ jobs:
             exit 1
           fi
 
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
       - name: Set up Go
+        if: inputs.docker-build != true
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
           go-version-file: ${{ format('{0}/go.mod', inputs.working-directory) }}
@@ -78,44 +78,74 @@ jobs:
           cache-dependency-path: ${{ format('{0}/go.sum', inputs.working-directory) }}
 
       - name: Build
+        if: inputs.docker-build != true
         env:
           BUILD_TARGET: ${{ inputs.build-target }}
         run: make "$BUILD_TARGET"
 
-      - name: Validate docker-build inputs
-        if: inputs.docker-build == true
+      - name: Set up QEMU
+        if: inputs.docker-build == true && inputs.push != true
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff9c25c0e60b9eba63c # v3
+
+      - name: Set up Docker Buildx
+        if: inputs.docker-build == true && inputs.push != true
+        uses: docker/setup-buildx-action@b5730b4fe97e6f9f14b9d7bb5f0f0b9f75a3b6ca # v3
+
+      - name: Extract Docker metadata
+        if: inputs.docker-build == true && inputs.push != true
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbea8a63d9c1064e4b9e02685b72 # v5
+        with:
+          images: ${{ inputs.image-name != '' && inputs.image-name || format('ghcr.io/{0}', github.repository) }}
+
+      - name: Build Docker image
+        if: inputs.docker-build == true && inputs.push != true
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6
+        with:
+          context: ${{ inputs.working-directory }}
+          platforms: ${{ inputs.platforms }}
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  push:
+    if: inputs.push == true
+    needs: build
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Validate push inputs
         env:
           IMAGE_NAME: ${{ inputs.image-name }}
-          PUSH: ${{ inputs.push }}
         run: |
           if [ "$RUNNER_OS" != "Linux" ]; then
-            echo "ERROR: docker-build requires a Linux runner; got: $RUNNER_OS"
+            echo "ERROR: docker push requires a Linux runner; got: $RUNNER_OS"
             exit 1
           fi
           if [ -z "$IMAGE_NAME" ]; then
-            echo "ERROR: image-name is required when docker-build is true"
+            echo "ERROR: image-name is required when push is true"
             exit 1
           fi
           case "$IMAGE_NAME" in
             ghcr.io/*) ;;
-            *)
-              if [ "$PUSH" = "true" ]; then
-                echo "ERROR: image-name must start with 'ghcr.io/' when push is true (got: '$IMAGE_NAME')"
-                exit 1
-              fi
-              ;;
+            *) echo "ERROR: image-name must start with 'ghcr.io/' when push is true (got: '$IMAGE_NAME')"; exit 1 ;;
           esac
 
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
       - name: Set up QEMU
-        if: inputs.docker-build == true
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff9c25c0e60b9eba63c # v3
 
       - name: Set up Docker Buildx
-        if: inputs.docker-build == true
         uses: docker/setup-buildx-action@b5730b4fe97e6f9f14b9d7bb5f0f0b9f75a3b6ca # v3
 
       - name: Log in to container registry
-        if: inputs.docker-build == true && inputs.push == true
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
         with:
           registry: ghcr.io
@@ -123,18 +153,16 @@ jobs:
           password: ${{ secrets.registry-token != '' && secrets.registry-token || secrets.GITHUB_TOKEN }}
 
       - name: Extract Docker metadata
-        if: inputs.docker-build == true
         id: meta
         uses: docker/metadata-action@902fa8ec7d6ecbea8a63d9c1064e4b9e02685b72 # v5
         with:
           images: ${{ inputs.image-name }}
 
       - name: Build and push Docker image
-        if: inputs.docker-build == true
         uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6
         with:
           context: ${{ inputs.working-directory }}
           platforms: ${{ inputs.platforms }}
-          push: ${{ inputs.push }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
