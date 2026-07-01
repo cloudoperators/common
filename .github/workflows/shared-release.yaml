@@ -69,7 +69,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           token: ${{ secrets.release-token }}
           ref: ${{ github.event.repository.default_branch }}
@@ -197,7 +197,7 @@ jobs:
           git push origin "$DEFAULT_BRANCH" --follow-tags
 
       - name: Create GitHub release
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.release-token }}
           script: |
