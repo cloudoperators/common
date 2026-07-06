@@ -13,6 +13,11 @@ on:
         required: false
         default: "latest"
         type: string
+      timeout:
+        description: "Timeout in minutes for the lint job"
+        required: false
+        default: 10
+        type: number
       working-directory:
         description: "Working directory for the job"
         required: false
@@ -32,6 +37,7 @@ on:
 jobs:
   lint:
     runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout }}
     permissions:
       contents: read
     defaults:
