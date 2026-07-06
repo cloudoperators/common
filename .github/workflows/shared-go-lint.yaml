@@ -43,6 +43,15 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
+      - name: Validate inputs
+        env:
+          TIMEOUT: ${{ inputs.timeout }}
+        run: |
+          if ! echo "$TIMEOUT" | grep -qE '^[1-9][0-9]*$'; then
+            echo "ERROR: timeout must be a positive integer (got: '$TIMEOUT')"
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
