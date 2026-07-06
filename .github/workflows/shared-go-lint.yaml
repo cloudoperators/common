@@ -44,6 +44,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Validate inputs
+        shell: bash
         env:
           TIMEOUT: ${{ inputs.timeout }}
         run: |
