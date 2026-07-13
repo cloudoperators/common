@@ -14,7 +14,7 @@ on:
         default: "latest"
         type: string
       timeout:
-        description: "Timeout in minutes for the lint job"
+        description: "Timeout in minutes passed to golangci-lint via --timeout"
         required: false
         default: 10
         type: number
@@ -37,13 +37,22 @@ on:
 jobs:
   lint:
     runs-on: ${{ inputs.runs-on }}
-    timeout-minutes: ${{ inputs.timeout }}
     permissions:
       contents: read
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
+      - name: Validate inputs
+        shell: bash
+        env:
+          TIMEOUT: ${{ inputs.timeout }}
+        run: |
+          if ! echo "$TIMEOUT" | grep -qE '^[1-9][0-9]*$'; then
+            echo "ERROR: timeout must be a positive integer (got: '$TIMEOUT')"
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -59,6 +68,7 @@ jobs:
         with:
           version: ${{ inputs.golangci-lint-version }}
           working-directory: ${{ inputs.working-directory }}
+          args: --timeout=${{ inputs.timeout }}m
 
       - name: Run govulncheck
         if: inputs.enable-govulncheck == true
