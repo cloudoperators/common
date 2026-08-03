@@ -38,7 +38,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Check License Header
-        uses: apache/skywalking-eyes/header@5c5b974209f0de5d905f37deb69369068ebfc15c # v0.7.0
+        uses: apache/skywalking-eyes/header@61275cc80d0798a405cb070f7d3a8aaf7cf2c2c1 # v0.8.0
         with:
             config: .github/licenserc.yaml
             mode: check
@@ -54,7 +54,7 @@ jobs:
     - name: Generate GitHub App Token
       id: github-app-token
       continue-on-error: true
-      uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
       with:
         app-id: ${{ secrets.app_id }}
         private-key: ${{ secrets.private_key }}
@@ -68,7 +68,7 @@ jobs:
         ref: ${{ github.event.pull_request.head.ref }}
 
     - name: Check License Header
-      uses: apache/skywalking-eyes/header@5c5b974209f0de5d905f37deb69369068ebfc15c # v0.7.0
+      uses: apache/skywalking-eyes/header@61275cc80d0798a405cb070f7d3a8aaf7cf2c2c1 # v0.8.0
       with:
           config: .github/licenserc.yaml
           mode: fix
