@@ -38,7 +38,7 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment != '' && inputs.environment || null }}
     concurrency:
-      group: release-${{ github.repository }}
+      group: goreleaser-${{ github.repository }}-${{ github.ref }}
       cancel-in-progress: false
     permissions:
       contents: write

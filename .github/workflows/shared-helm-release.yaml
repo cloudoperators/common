@@ -51,7 +51,7 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment != '' && inputs.environment || null }}
     concurrency:
-      group: release-${{ github.repository }}
+      group: helm-release-${{ github.repository }}-${{ inputs.chart-name }}-${{ github.ref }}
       cancel-in-progress: false
     permissions:
       contents: read
@@ -97,9 +97,9 @@ jobs:
             echo "ERROR: chart-dir '${CHART_DIR}' does not contain Chart.yaml"
             exit 1
           fi
-          CHART_VERSION=$(grep -E '^version:[[:space:]]*' "${CHART_DIR}/Chart.yaml" | head -1 | sed 's/^version:[[:space:]]*//' | tr -d '[:space:]"')
+          CHART_VERSION=$(helm show chart "${CHART_DIR}" | grep -E '^version:' | head -1 | sed 's/^version:[[:space:]]*//' | tr -d '[:space:]')
           if ! echo "$CHART_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "ERROR: could not parse semver from Chart.yaml version field (got: '$CHART_VERSION')"
+            echo "ERROR: could not parse semver from chart metadata (got: '$CHART_VERSION')"
             exit 1
           fi
           echo "chart_version=${CHART_VERSION}" >> "$GITHUB_OUTPUT"
