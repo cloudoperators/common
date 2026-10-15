@@ -47,9 +47,11 @@ The entry point for all releases. Bumps the version in `Makefile` and/or `Chart.
 
 | Secret | Required | Description |
 |---|---|---|
-| `release-token` | ✅ | PAT or `GITHUB_TOKEN` with `contents: write` permission |
+| `release-token` | ✅ | PAT or GitHub App token with `contents: write` permission |
 | `dispatch-app-id` | | GitHub App ID for dispatching to `greenhouse-extensions` |
 | `dispatch-app-private-key` | | GitHub App private key for dispatching to `greenhouse-extensions` |
+
+> **Important:** Tags pushed with the built-in `GITHUB_TOKEN` do **not** trigger downstream `push`-triggered workflows (this is a GitHub security restriction). If you want the tag created by `shared-release` to automatically kick off `shared-docker-release`, `shared-goreleaser`, or `shared-helm-release`, you must pass a **PAT** or **GitHub App token** as `release-token`. Repos that use only `GITHUB_TOKEN` will need to trigger those downstream workflows manually after the release tag is created.
 
 ### Example: App release (bumps version + appVersion)
 
@@ -326,9 +328,15 @@ jobs:
 
 ## Complete example: Full release pipeline
 
-This shows all four workflows wired together for a Go project with a Helm chart.
+App releases and chart releases are **separate flows** with separate tags — `v*` for app releases, `helm-chart-*` for chart-only releases. Wire them up as two independent pipelines.
 
-**`.github/workflows/cut-release.yaml`** — manually triggered, bumps version and creates tag:
+> **Prerequisite:** For tags to automatically trigger downstream `push` workflows, `release-token` must be a PAT or GitHub App token. Tags pushed with `GITHUB_TOKEN` do not trigger other workflows.
+
+### App release pipeline
+
+Triggered manually → creates `vX.Y.Z` tag → Docker and binary publish fire automatically.
+
+**`.github/workflows/cut-release.yaml`** — manually triggered, bumps version and creates `v*` tag:
 ```yaml
 name: Cut Release
 
@@ -353,7 +361,7 @@ jobs:
       release-token: ${{ secrets.RELEASE_TOKEN }}
 ```
 
-**`.github/workflows/release-docker.yaml`** — fires automatically when `cut-release` creates a `v*` tag:
+**`.github/workflows/release-docker.yaml`** — fires when `cut-release` creates a `v*` tag:
 ```yaml
 name: Release Docker
 
@@ -372,7 +380,7 @@ jobs:
       image-name: ghcr.io/cloudoperators/myapp
 ```
 
-**`.github/workflows/release-binaries.yaml`** — fires automatically when `cut-release` creates a `v*` tag:
+**`.github/workflows/release-binaries.yaml`** — fires when `cut-release` creates a `v*` tag:
 ```yaml
 name: Release Binaries
 
@@ -388,7 +396,11 @@ jobs:
       contents: write
 ```
 
-**`.github/workflows/cut-chart-release.yaml`** — for chart-only releases:
+### Chart release pipeline
+
+Triggered manually → creates `helm-chart-vX.Y.Z` tag → Helm publish fires automatically.
+
+**`.github/workflows/cut-chart-release.yaml`** — manually triggered, bumps chart version and creates `helm-chart-*` tag:
 ```yaml
 name: Cut Chart Release
 
