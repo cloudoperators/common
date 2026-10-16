@@ -32,6 +32,11 @@ on:
         required: false
         default: false
         type: boolean
+      chart-only:
+        description: "Bump Chart.yaml version only (skip appVersion, tag as helm-chart-vX.Y.Z, skip GitHub Release). Use for chart-only releases that do not involve a new app binary."
+        required: false
+        default: false
+        type: boolean
       dispatch-greenhouse-extensions:
         description: "Trigger a repository_dispatch event on cloudoperators/greenhouse-extensions after release"
         required: false
@@ -79,14 +84,26 @@ jobs:
         env:
           MAKEFILE_PATH: ${{ inputs.makefile-path }}
           CHART_PATH: ${{ inputs.chart-path }}
+          CHART_ONLY: ${{ inputs.chart-only }}
         run: |
           if [ "$RUNNER_OS" != "Linux" ]; then
             echo "ERROR: this workflow requires a Linux runner (uses GNU sed); got: $RUNNER_OS"
             exit 1
           fi
-          if [ -z "$MAKEFILE_PATH" ] && [ -z "$CHART_PATH" ]; then
-            echo "ERROR: at least one of makefile-path or chart-path is required for version computation"
-            exit 1
+          if [ "$CHART_ONLY" = "true" ]; then
+            if [ -z "$CHART_PATH" ]; then
+              echo "ERROR: chart-path is required when chart-only is true"
+              exit 1
+            fi
+            if [ -n "$MAKEFILE_PATH" ]; then
+              echo "ERROR: makefile-path must not be set when chart-only is true — chart-only mode reads and writes Chart.yaml only"
+              exit 1
+            fi
+          else
+            if [ -z "$MAKEFILE_PATH" ] && [ -z "$CHART_PATH" ]; then
+              echo "ERROR: at least one of makefile-path or chart-path is required for version computation"
+              exit 1
+            fi
           fi
           if [ -n "$MAKEFILE_PATH" ] && [ ! -f "$MAKEFILE_PATH" ]; then
             echo "ERROR: makefile-path '$MAKEFILE_PATH' does not exist"
@@ -174,7 +191,7 @@ jobs:
           sed -i "s/^version:.*/version: ${NEW_VERSION}/" "$CHART_PATH"
 
       - name: Update Chart.yaml appVersion
-        if: inputs.chart-path != '' && inputs.bump-chart-app-version == true
+        if: inputs.chart-path != '' && inputs.bump-chart-app-version == true && inputs.chart-only == false
         env:
           NEW_VERSION: ${{ steps.version.outputs.new }}
           CHART_PATH: ${{ inputs.chart-path }}
@@ -193,10 +210,16 @@ jobs:
           if [ -n "$MAKEFILE_PATH" ]; then git add "$MAKEFILE_PATH"; fi
           if [ -n "$CHART_PATH" ]; then git add "$CHART_PATH"; fi
           git commit -m "chore: bump version to ${NEW_VERSION}"
-          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
+          if [ "${{ inputs.chart-only }}" = "true" ]; then
+            TAG="helm-chart-v${NEW_VERSION}"
+          else
+            TAG="v${NEW_VERSION}"
+          fi
+          git tag -a "$TAG" -m "Release $TAG"
           git push origin "$DEFAULT_BRANCH" --follow-tags
 
       - name: Create GitHub release
+        if: inputs.chart-only == false
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           github-token: ${{ secrets.release-token }}
