@@ -103,7 +103,8 @@ jobs:
             exit 1
           fi
           echo "chart_version=${CHART_VERSION}" >> "$GITHUB_OUTPUT"
-          if helm pull "oci://${REGISTRY}/${{ github.repository }}/charts/${CHART_NAME}" --version "${CHART_VERSION}" 2>/dev/null; then
+          PULL_STDERR=$(helm pull "oci://${REGISTRY}/${{ github.repository }}/charts/${CHART_NAME}" --version "${CHART_VERSION}" 2>&1 >/dev/null) && PULL_EXIT=0 || PULL_EXIT=$?
+          if [ "$PULL_EXIT" -eq 0 ]; then
             if [ "$ALLOW_EXISTING" = "true" ]; then
               echo "Chart ${CHART_NAME}:${CHART_VERSION} already exists in OCI registry — skipping (allow-existing=true)"
               echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -111,6 +112,12 @@ jobs:
               echo "ERROR: chart ${CHART_NAME}:${CHART_VERSION} already exists in OCI registry — bump Chart.yaml version before pushing"
               exit 1
             fi
+          elif echo "$PULL_STDERR" | grep -qiE 'not found|does not exist|manifest unknown|tag does not exist'; then
+            : # version absent — proceed with push
+          else
+            echo "ERROR: helm pull failed with an unexpected error (auth/network/transport issue):"
+            echo "$PULL_STDERR"
+            exit 1
           fi
 
       - name: Run helm dependency update
