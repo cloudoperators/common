@@ -33,10 +33,15 @@ on:
         default: false
         type: boolean
       chart-only:
-        description: "Bump Chart.yaml version only (skip appVersion, tag as helm-chart-vX.Y.Z, skip GitHub Release). Use for chart-only releases that do not involve a new app binary."
+        description: "Bump Chart.yaml version only (tag as helm-chart-vX.Y.Z, skip GitHub Release). Use for chart-only releases that do not involve a new app binary."
         required: false
         default: false
         type: boolean
+      app-version:
+        description: "App version to write as appVersion in Chart.yaml when chart-only is true (e.g. v0.4.0). If omitted, the latest v* tag in the repository is used automatically."
+        required: false
+        default: ""
+        type: string
       dispatch-greenhouse-extensions:
         description: "Trigger a repository_dispatch event on cloudoperators/greenhouse-extensions after release"
         required: false
@@ -93,10 +98,6 @@ jobs:
           if [ "$CHART_ONLY" = "true" ]; then
             if [ -z "$CHART_PATH" ]; then
               echo "ERROR: chart-path is required when chart-only is true"
-              exit 1
-            fi
-            if [ -n "$MAKEFILE_PATH" ]; then
-              echo "ERROR: makefile-path must not be set when chart-only is true — chart-only mode reads and writes Chart.yaml only"
               exit 1
             fi
           else
@@ -197,6 +198,34 @@ jobs:
           CHART_PATH: ${{ inputs.chart-path }}
         run: |
           sed -i "s/^appVersion:.*/appVersion: \"${NEW_VERSION}\"/" "$CHART_PATH"
+
+      - name: Resolve appVersion for chart-only release
+        if: inputs.chart-only == true && inputs.chart-path != ''
+        id: app-version
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app-version }}
+        run: |
+          if [ -n "$APP_VERSION_INPUT" ]; then
+            echo "Using provided app-version: $APP_VERSION_INPUT"
+            echo "value=$APP_VERSION_INPUT" >> "$GITHUB_OUTPUT"
+          else
+            LATEST_TAG=$(git tag --list 'v*' --sort=-version:refname | head -1 || true)
+            if [ -z "$LATEST_TAG" ]; then
+              echo "WARNING: no v* tag found in repository, appVersion will not be updated"
+              echo "value=" >> "$GITHUB_OUTPUT"
+            else
+              echo "Auto-resolved app-version from latest tag: $LATEST_TAG"
+              echo "value=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Update Chart.yaml appVersion (chart-only)
+        if: inputs.chart-only == true && inputs.chart-path != '' && steps.app-version.outputs.value != ''
+        env:
+          APP_VERSION: ${{ steps.app-version.outputs.value }}
+          CHART_PATH: ${{ inputs.chart-path }}
+        run: |
+          sed -i "s/^appVersion:.*/appVersion: \"${APP_VERSION}\"/" "$CHART_PATH"
 
       - name: Commit version bump and tag
         env:
